@@ -1,0 +1,78 @@
+\documentclass[12pt]{book}
+\usepackage{xeCJK}
+\usepackage{amsmath}
+
+\usepackage[T1]{fontenc}
+\usepackage{times}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{imakeidx}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{etoolbox}  
+\usepackage{fullpage}
+\usepackage{soul}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}  
+\frenchspacing
+\hypersetup{pdfauthor={Russ Cox, Frans Kaashoek, Robert Morris},
+            pdftitle={xv6: a simple, Unix-like teaching operating system},}
+  
+\lstset{basicstyle=\small\ttfamily}
+\lstset{morecomment=[is]{[[[}{]]]}}
+\lstset{escapeinside={(*@}{@*)}}
+\lstset{xleftmargin=5.0ex}
+
+\newcommand{\github}{https://github.com/mit-pdos/xv6-riscv/blob/riscv/}
+
+\newcommand{\fileref}[1]{\href{\github/#1}{\small{(#1)}}}
+\newcommand{\lineref}[2]{\href{\github/#1\#L#2}{\small{(#1:#2)}}}
+\newcommand{\linerefs}[3]{\href{\github/#1\#L#2-L#3}{\small(#1:#2-#3)}}
+
+\newcommand{\indextext}[1]{\textit{#1}\index{#1}}
+\newcommand{\indextextx}[1]{{#1}\index{#1}}
+\newcommand{\indexcode}[1]{\lstinline{#1}\index{#1@\lstinline{#1}}}
+
+%% editing markup
+\newcommand{\insertnote}[3]{\noindent\textcolor{#1}{\textbf{#2:} #3}}
+\newcommand{\note}[1]{\insertnote{blue}{NOTE}{#1}}
+\newcommand{\rtm}[1]{\insertnote{red}{RTM}{#1}}
+\newcommand{\mfk}[1]{\insertnote{red}{MFK}{#1}}
+%% for publishing book without notes
+%\renewcommand{\insertnote}[3]{}
+
+\title{xv6：一个简单的类Unix教学操作系统  }
+\author{Russ Cox \and Frans Kaashoek \and Robert Morris}
+\makeindex
+\begin{document}
+
+  
+
+   \maketitle     
+
+   \tableofcontents     
+
+    \input{latex.out/acks}   
+    \input{latex.out/unix}   
+    \input{latex.out/first}   
+    \input{latex.out/mem}   
+    \input{latex.out/trap}   
+    \input{latex.out/interrupt}   
+    \input{latex.out/lock}   
+    \input{latex.out/sched}   
+    \input{latex.out/fs}   
+    \input{latex.out/lock2}   
+    \input{latex.out/sum}     
+
+ {    \interlinepenalty    =10000
+    \bibliographystyle{plain}   
+    \bibliography{book}      }   
+
+   \printindex     
+
+
+  
+\end{document}
+

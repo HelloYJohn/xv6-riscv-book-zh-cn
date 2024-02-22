@@ -1,0 +1,550 @@
+.\"
+.\"	preliminary formatting, subject to change.
+.\"	mostly lifted from rsc's thesis and cleaned up.
+.\"
+.do xflag 3	\" heirloom troff: enable long names like groff
+.\" all warnings
+.warn +w
+.mediasize letter
+.hylang en_US
+.lc_ctype en_US.UTF-8
+.nr realnumbers 1
+.if \n[realnumbers] .pn \np
+.\"
+.\"	fonts
+.\"
+.fp 1 R MinionPro-Regular otf
+.feature R +tnum
+.fp 2 I MinionPro-It otf
+.fp 3 B MinionPro-Bold otf
+.fp 4 BI MinionPro-BoldIt otf
+.fp 5 C LucidaSans-Typewriter83 pfa
+.\" Use vertically centered tilde, circumflex
+.ftr R ~\[asciitilde]
+.ftr I ~\[asciitilde]
+.ftr B ~\[asciitilde]
+.ftr BI ~\[asciitilde]
+.ftr C ~\[asciitilde]
+.ftr R ^\[asciicircum]
+.ftr I ^\[asciicircum]
+.ftr B ^\[asciicircum]
+.ftr BI ^\[asciicircum]
+.ftr C ^\[asciicircum]
+.\"
+.\"	date
+.\"
+.\"9 .fp 5 C LucidaSansCW83
+.if \n(mo==1 .ds mo January
+.if \n(mo==2 .ds mo February
+.if \n(mo==3 .ds mo March
+.if \n(mo==4 .ds mo April
+.if \n(mo==5 .ds mo May
+.if \n(mo==6 .ds mo June
+.if \n(mo==7 .ds mo July
+.if \n(mo==8 .ds mo August
+.if \n(mo==9 .ds mo September
+.if \n(mo==10 .ds mo October
+.if \n(mo==11 .ds mo November
+.if \n(mo==12 .ds mo December
+.nr _ (\n(yr%100)+2000
+.ds yr \n_
+.ds date "\*(mo \n(dy, \*(yr
+.\"
+.\"	initialization
+.\"
+.ds center-footer "\\n%
+.ds center-header "
+.ds left-footer "\s-2DRAFT as of \\*[date]\s+2
+.ds left-header "
+.ds right-footer "\s-2https://pdos.csail.mit.edu/6.828/xv6\s+2
+.ds right-header "
+.nr IL 0
+.nr ID 4n
+.nr IN 0
+.nr h1 0 1
+.nr line-length 6i
+.nr page-line-length 0
+.nr left-margin 1.25i
+.nr P0 0.4v
+.nr page-length 11i
+.nr footer-margin 1i
+.nr header-margin 1i
+.nr point-size 12
+.nr RN 0 1
+.nr T0 4n
+.nr exercise 0 1
+.ft 1
+.\"
+.\"	wa - print a warning
+.\"
+.de wa
+.tm \\n(.F:\\n(.c: \\$1 \\$2 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8 \\$9
+..
+.\"
+.\"	init - run-time initialization
+.\"
+.de notrap
+.wh 0
+.wh -\\n[footer-margin]u
+.wh -\\n[footer-margin]u/2u
+..
+.de trap
+.wh 0 new-page
+.wh -\\n[footer-margin]u page-footer
+.wh -\\n[footer-margin]u/2u page-bottom
+..
+.de init
+.ll \\n[line-length]u
+.po \\n[left-margin]u
+.pl \\n[page-length]u
+.new-page
+.trap
+.nr page-number 1
+..
+.\"
+.\"	new page
+.\"
+.de new-page
+.sp \\n[header-margin]u/2u
+.ev 1
+.in 0i
+.ll \\n[line-length]u
+.ad c
+'tl '\\*[left-header]'\\*[center-header]'\\*[right-header]'
+.nr top \\n[header-margin]
+\\X'top \\n[top]'
+.if \\n[have-postponed-figs] \{ .\"
+.br
+.ad l
+.sp |\\n[top]u
+.postponed-figs
+.mk top
+.ds postponed-figs "
+.nr have-postponed-figs 0
+.\}
+.ev
+'sp |\\n[top]u
+..
+.\"
+.\"	page footer
+.\"
+.de page-footer
+.nr column +1
+.ie \\n[column]<\\n[columns] .next-column
+.el \{\
+.ll \\n[line-length]u
+.po -((\\n[columns]u-1u)*(\\n[line-length]u+\\n[column-margin]u))
+.nr saved-po \\n(.o
+.ch page-footer 20i
+.ev 1
+'sp |(\\n[page-length]u-\\n[footer-margin]u)
+.bp
+.ev
+.po \\n[saved-po]u
+.ch page-footer -\\n[footer-margin]u
+.nr column 0
+.\}
+..
+.\"
+.\"	.multi-column n margin
+.\"
+.de multi-column
+.nr columns \\$1
+.nr column-margin \\$2
+.nr page-line-length \\n[line-length]u
+.nr line-length (\\n[line-length]u-((\\n[columns]-1)*\\n[column-margin]u))/\\n[columns]
+..
+.nr columns 1
+.nr column-margin 0
+.de next-column
+'sp |\\n[top]u
+.po +\\n[line-length]u
+.po +\\n[column-margin]u
+..
+.\"
+.\"	page bottom
+.\"
+.de page-bottom
+.nr save-ps \\n(.s
+.nr save-ft \\n(.f
+.ft 1
+.ps \\n[point-size]
+.ie \\n[page-line-length]>0 'lt \\n[page-line-length]u
+.el 'lt \\n[line-length]u
+.po \\n[left-margin]u
+.if \\n%>0 .tl \(ts\\*[left-footer]\(ts\\*[center-footer]\(ts\\*[right-footer]\(ts
+.\" show index terms in upper right margin
+.ch page-bottom 20i
+.index-trap
+.ft \\n[save-ft]
+.ps \\n[save-ps]
+.sp |\\nxu
+.ch page-bottom -\\n[footer-margin]u/2u
+..
+.de index-trap
+.ev 1
+.mk x
+.sp |\\n[top]u
+.ad l
+.ps 9
+.vs 10.8
+.nr marginalia \\n[left-margin]u+\\n[line-length]u+0.2i
+.po \\n[marginalia]u
+.ll (8.4i-\\n[marginalia]u)
+.index-terms
+.br
+.ds index-terms "
+.po \\n[left-margin]u
+.ev
+..
+.de index-terms
+..
+.\"
+.\"	insert index term
+.\"	(no display, just creates the entry)
+.\"
+.de index
+.if !'\\$2'' .wa "likely missing quote in .index argument: \\$1 \\$2 \\$3 \\$4 \\$5
+.am index-terms xx
+.if \\n[index-margins] \\h'-0.1i'\\$1\c
+\\X'index \\$1'
+.br
+.xx
+..
+.\"
+.\"	bold
+.\"
+.de bold
+.font-change B "\\$1" "\\$2\\&" "\\$3"
+..
+.\"
+.\"	code font
+.\"
+.de code
+.font-change C "\\$1" "\\$2\\&" "\\$3"
+..
+.de code-index
+.font-change C "\\$1" "\\$2\&" "\\$3"
+.index "\\$1+code
+..
+.\"
+.\"	font change
+.\"
+.de font-change
+.ie \\n(.$==1 .ft \\$1
+.el \&\\$4\\f\\$1\\$2\&\\fP\\$3
+..
+.\"
+.\"	italic
+.\"
+.de italic
+.font-change I "\\$1" "\\$2\\&" "\\$3"
+..
+.de italic-index
+.font-change I "\\$1" "\\$2\&" "\\$3"
+.index "\\$1
+..
+.\"
+.\"	left-adjust paragraph
+.\"
+.nr indent 0
+.nr para-spacing 0
+.de LP
+.in \\n[indent]u
+.br
+.hy 1
+.ad b
+.fi
+.ft R
+.sp \\n[para-spacing]u
+.PS
+..
+.\"
+.\"	ordinary paragraph
+.\"
+.nr LP 0
+.de PP
+.if \\n(LP>0 .sp 0.2v
+.LP
+.if \\n(LP>0 .nr LP 0
+.ti 2m
+..
+.\"
+.\"	indented paragraph
+.\"
+.de IP
+.br
+.ne 3
+.sp 0.2v
+.ie '\\$2'' .nr IP 4n
+.el .nr IP \\$2
+.in \\n(INu+\\n(IPu
+.if !'\\$1'' \{\
+.	ti -\\n(IPu
+\&\\$1
+.	ie \\n(.k>=\\n(.i .br
+.	el .sp -1\}
+..
+.\"
+.\"	set point size
+.\"
+.de PS
+.ps \\n[point-size]
+.nr _ \\n[point-size]*1200u
+.vs \\n_u
+..
+.\"
+.\"	chapter-like
+.\"
+.de big-heading
+.init
+.mk x
+.if !'\\$2'' \v'-1v-4p'\\X'PDFMark: Bookmark 0 \\$2'
+.if !'\\$3'' \A'toc-\\$3'
+.sp |\\nxu
+.ft B
+.ps 20
+.vs 24
+.if !'\\$1'' \\$1
+..
+.\"
+.\"	chapter-like heading
+.\"
+.de chapterlike
+.big-heading "" "\\$1" "\\$1
+\\$1
+.sp
+.LP
+..
+.\"
+.\"	chapter heading
+.\"
+.de chapter
+.big-heading "Chapter \\*[\\$1]" "\\*[\\$1]: \\$2" "\\*[\\$1]
+.sp
+\\$2
+.sp
+.LP
+..
+.\"
+.\"	Appendix heading
+.\"
+.de appendix
+.big-heading "Appendix \\*[\\$1]" "\\*[\\$1]: \\$2" "\\*[\\$1]
+.sp
+\\$2
+.sp
+.LP
+..
+.\"
+.\"	section heading
+.\"
+.de section
+.br
+.ft B
+.ps 16
+.vs 18
+.sp 1.5
+\\$1\v'-1v'\\X'PDFMark: Bookmark 1 \\$1'
+.PS
+.sp 0.5
+.ft R
+.LP
+..
+.\"
+.\"	exercises
+.\"
+.de exercise
+.LP
+\\n+[exercise].
+..
+.de xx
+..
+.de answer xx
+.ig
+.xx
+.\"
+.\"	font change aliases
+.\"
+.de register-font
+.code "\\$1" "\\$2" "\\$3"
+..
+.de register
+.register-font "%\\$1" "\\$2" "\\$3"
+..
+.de opcode
+.code "\\$1" "\\$2" "\\$3"
+..
+.de file
+.code "\\$1" "\\$2" "\\$3"
+..
+.de address
+.code "\\$1" "\\$2" "\\$3"
+..
+.de smallcaps
+\&\\$3\s-3\\$1\s+3\\$2
+..
+.de sheet
+.line "\\$1:1" "\\$2" "\\$3"
+..
+.de line
+.ds LINE xxxx
+.sy touch .turd
+.sy ./line \\$1 >.turd
+.so .turd
+.sy rm -f .turd
+.if 'xxxx'\\*[LINE]' .tm LINE FAIL: "\\$1"
+\&\\$3\s-3(\\*[LINE])\s+3\\$2
+..
+.de lines
+.line "\\$1" "\\$2" "\\$3"
+..
+.\"
+.\"	P1 - code start
+.\"
+.de P1
+.sp 0.3v
+.IP \\$1
+.nf
+.ft C
+.ta +4n +4n +4n +4n +4n +4n +4n +4n
+.ps 10
+.vs 12
+..
+.\"
+.\"	P2 - code end
+.\"
+.de P2
+.sp 0.4v
+.PS
+.LP
+..
+.\"
+.\"	P3 - code break
+.\"
+.de P3
+.P2
+.P1
+..
+.\"
+.\"	TS/TE - no-ops for tbl
+.\"
+.de TS
+..
+.de TE
+..
+.\"	F1/F2/F3 - Figures
+.\"
+.\"	.F1
+.\"	Figure
+.\"	.F2
+.\"	Caption
+.\"	.F3
+.\"
+.de F1
+.nr top 0
+.ll \\n[line-length]u
+.po \\n[left-margin]u
+.pl \\n[page-length]u
+.sp |0i
+.mk x
+.ds Fignum \\*[fig:\\*[the-figure]]
+\\X'start \\nx'\A'fig-\\*[Fignum]'
+..
+.de F2
+.LP
+.ps -2
+.vs -2
+.br
+\fBFigure \\*[Fignum]\fP.
+..
+.de F3
+.br
+.ps +2
+.vs +2
+\D'l \n[line-length]u 0'
+.sp 0.125i
+.mk x
+.index-trap
+\\X'end \\nx'
+..
+.\"
+.\"	figure - load figure from file
+.\"
+.\"	.figure name file
+.\"
+.nr have-postponed-figs 0
+.de postponed-figs
+..
+.de figure
+.br
+.if '\\$1'' .wa .figure needs name argument
+.if !'\\$2'' .wa .figure file is implied by name
+.\"	flush postponed figures
+.\"	to avoid reordering: want Figure 2 after Figure 1.
+.if \\n[have-postponed-figs] .bp
+.ds Fignum \\*[fig:\\$1]
+.nr Fight \\n[fig-\\$1-height]
+.ds Figfile \\*[fig-\\$1-file]
+.ie \\n[Fight]-\\n(.t \{ .\"
+.\"	postpone figure to next page.
+.\".wa "Figure \\*[Fignum] postponed \\n[Fight] from \\*[Figfile]
+.nr have-postponed-figs 1
+.am postponed-figs
+\\X'figure \\*[Figfile] \\n[Fight]'
+.sp \\n[Fight]u
+\\..
+.\}
+.el \{ .\"
+.\"	put figure at top of this page.
+.\".wa "Figure \\*[Fignum] at top of this page from \\*[Figfile]
+\\X'top \\n[top]'
+\\X'figure \\*[Figfile] \\n[Fight]'
+.nr top +\\n[Fight]
+.sp \\n[Fight]u
+.\}
+..
+.\"
+.\"	figref - hyperlinked figure reference
+.\"
+.de figref
+\\$3\T'fig-\\*[fig:\\$1]'Figure \\*[fig:\\$1]\T\\$2
+..
+.\"
+.\"	EPS - Encapsulated PostScript
+.\"
+.\"	.EPS file [scale]
+.\"
+.\"	scale is a percentage (25 means 1/4)
+.\"
+.de EPS
+.psbb \\$1
+.nr eps_scale 100
+.if !'\\$2'' .nr eps_scale \\$2
+.nr y (\\n[ury]p-\\n[lly]p)*\\n[eps_scale]/100
+.nr x (\\n[urx]p-\\n[llx]p)*\\n[eps_scale]/100
+.nr z (\\n[line-length]u-\\nxu)/2
+.\" Troff sees the PI request as a character on a line.
+.\" Tell it the line height is the same height as the
+.\" EPS file, and then adjust the EPS file upward
+.\" to match.
+.PI \\$1 "\\nyu,\\nxu,0,\\nzu"
+.sp \\nyu
+.\" Reset line height.
+.PS
+..
+.nr index-margins 1  \" 1 = show index terms in margins, 0 = don't
+.\"
+.\"
+.\"	table of contents
+.\"
+.ds CH:UNIX 0
+.ds CH:FIRST 1
+.ds CH:MEM 2
+.ds CH:TRAP 3
+.ds CH:LOCK 4
+.ds CH:SCHED 5
+.ds CH:FS 6
+.ds CH:SUM 7
+.ds APP:HW A
+.ds APP:BOOT B
