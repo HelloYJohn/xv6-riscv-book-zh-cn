@@ -1,8 +1,4 @@
 
-\documentclass[UTF8]{article}
-\usepackage{xeCJK}
-\usepackage{amsmath,amssymb}
-\begin{document}
 
    \chapter{Scheduling}   
     \label{CH:SCHED}     
@@ -26,7 +22,7 @@ Xv6 通过在两种情况下将每个 CPU 从一个进程切换到另一个进�
 \label{fig:switch}
 \end{figure}     
 
-图〜   \ref{fig:switch}   概述了从一个用户进程切换到另一个用户进程所涉及的步骤：用户内核转换（系统调用或中断）到旧进程的内核线程，上下文切换到当前CPU的调度程序线程，上下文切换到新进程的内核线程，并返回用户级进程的陷阱。 xv6 调度程序为每个 CPU 有一个专用线程（保存的寄存器和堆栈），因为调度程序在旧进程的内核堆栈上执行是不安全的：其他一些核心可能会唤醒该进程并运行它，使用相同的线程将是一场灾难堆叠在两个不同的核心上。在本节中，我们将研究在内核线程和调度程序线程之间切换的机制。  
+图~\ref{fig:switch}   概述了从一个用户进程切换到另一个用户进程所涉及的步骤：用户内核转换（系统调用或中断）到旧进程的内核线程，上下文切换到当前CPU的调度程序线程，上下文切换到新进程的内核线程，并返回用户级进程的陷阱。 xv6 调度程序为每个 CPU 有一个专用线程（保存的寄存器和堆栈），因为调度程序在旧进程的内核堆栈上执行是不安全的：其他一些核心可能会唤醒该进程并运行它，使用相同的线程将是一场灾难堆叠在两个不同的核心上。在本节中，我们将研究在内核线程和调度程序线程之间切换的机制。  
 
 从一个线程切换到另一个线程涉及保存旧线程的CPU寄存器，并恢复新线程先前保存的寄存器；堆栈指针和程序计数器的保存和恢复意味着CPU将切换堆栈并切换正在执行的代码。  
 
@@ -75,13 +71,12 @@ Xv6 通过在两种情况下将每个 CPU 从一个进程切换到另一个进�
 在我们的例子中，
  已调用    \indexcode{sched}   
  要切换到的    \indexcode{swtch}   
-    \indexcode{cpu->context}    ，每 CPU 调度程序上下文。该上下文是在过去的某个时刻保存的
-    \lstinline{scheduler}    已调用
+    \indexcode{cpu->context}    ，每 CPU 调度程序上下文。该上下文是在过去的某个时刻
+    \lstinline{scheduler}    调用
     \lstinline{swtch}   
-    \lineref{kernel/proc.c:/swtch.&c/}    切换到现在放弃 CPU 的进程。当。。。的时候
-    \indexcode{swtch}   我们一直在追踪退货，它没有退货
-    \lstinline{sched}    但
-    \indexcode{scheduler}    ，当前CPU调度程序堆栈中的堆栈指针。
+    \lineref{kernel/proc.c:/swtch.&c/}     切换到现在放弃 CPU 的进程保存的。当我们一直在追踪    \indexcode{swtch}   返回时，它返回的不是
+    \lstinline{sched}    而是
+    \indexcode{scheduler}    ，堆栈指针位于当前CPU的调度程序堆栈中。
     \section{代码：调度  }     
 
 最后一部分着眼于底层细节
@@ -89,11 +84,11 @@ Xv6 通过在两种情况下将每个 CPU 从一个进程切换到另一个进�
     \lstinline{swtch}    作为给定并检查通过调度程序从一个进程的内核线程切换到另一个进程。调度程序以每个 CPU 一个特殊线程的形式存在，每个线程运行
     \lstinline{scheduler}    函数。该函数负责选择接下来运行哪个进程。想要放弃CPU的进程必须获得自己的进程锁
     \indexcode{p->lock}    ，释放它持有的任何其他锁，更新自己的状态（    \lstinline{p->state}    ），然后调用
-    \indexcode{sched}    。您可以在中看到此序列
+    \indexcode{sched}    。您可以在
     \lstinline{yield}   
     \lineref{kernel/proc.c:/^yield/}    ,
     \texttt{sleep}    和
-    \texttt{exit}    。
+    \texttt{exit} 中看到此序列   。
     \lstinline{sched}    仔细检查其中一些要求
     \linerefs{kernel/proc.c:/if..holding/,/running/}    然后检查一个含义：由于持有锁，因此应该禁用中断。最后，
     \indexcode{sched}    调用
@@ -431,14 +426,15 @@ Xv6的
     \lstinline{sleep}    被调用，并且（在管道的情况下）读取管道中正在等待的任何数据。其他进程会发现，尽管被唤醒，却没有数据可读取。从他们的角度来看，这次唤醒是“虚假的”，他们必须再次入睡。因此，   \lstinline{sleep}    始终在检查条件的循环内调用。  
 
 如果两次使用睡眠/唤醒意外选择相同的通道，则不会造成任何损害：它们会看到虚假唤醒，但如上所述的循环将容忍此问题。睡眠/唤醒的大部分魅力在于它既是轻量级的（不需要创建特殊的数据结构来充当睡眠通道），又提供了一个间接层（调用者不需要知道他们正在与哪个特定进程交互）。
-    \section{代码： 管道  }    使用    \lstinline{sleep}    和    \lstinline{wakeup}    来同步生产者和消费者的更复杂的示例是 xv6 的管道实现。我们在第    \ref{CH:UNIX}    章中看到了管道的接口：写入管道一端的字节被复制到内核缓冲区中，然后可以从管道的另一端读取。未来的章节将研究管道周围的文件描述符支持，但现在让我们看看以下的实现
+    \section{代码： 管道  }    
+    使用    \lstinline{sleep}    和    \lstinline{wakeup}    来同步生产者和消费者的更复杂的示例是 xv6 的管道实现。我们在第    \ref{CH:UNIX}    章中看到了管道的接口：写入管道一端的字节被复制到内核缓冲区中，然后可以从管道的另一端读取。未来的章节将研究管道周围的文件描述符支持，但现在让我们看看以下的实现
     \indexcode{pipewrite}    和
     \indexcode{piperead}    。  
 
 每个管道由一个表示
     \indexcode{struct pipe}    ，其中包含
     \lstinline{lock}    和
-    \lstinline{data}    缓冲区。田野
+    \lstinline{data}    缓冲区。字段
     \lstinline{nread}    和
     \lstinline{nwrite}    计算从缓冲区读取和写入缓冲区的总字节数。缓冲区回绕：之后写入的下一个字节
     \lstinline{buf[PIPESIZE-1]}    是
@@ -448,7 +444,7 @@ Xv6的
     \lstinline{==}   
     \lstinline{nread}    ），但这意味着索引到缓冲区必须使用
     \lstinline{buf[nread}   
-    \lstinline    {
+	\lstinline{%}
     \lstinline{PIPESIZE]}    而不仅仅是
     \lstinline{buf[nread]}   （类似地
     \lstinline{nwrite}    ）。  
@@ -499,8 +495,8 @@ Xv6的
     \lstinline{pi->nwrite}    );这可能会使系统在万一有大量读取器和写入器等待同一个管道时更加高效。管道代码在循环内休眠，检查休眠条件；如果有多个读者或作者，除了第一个唤醒的进程之外的所有进程都会看到条件仍然为假并再次睡眠。
     \section{代码：等待、退出、杀死  }   
     \lstinline{sleep}    和
-    \lstinline{wakeup}    可用于多种等待。第    \ref{CH:UNIX}    章中介绍的一个有趣的示例是子级    \indexcode{exit}    与其父级    \indexcode{wait}    之间的交互。在孩子死亡时，父母可能已经在  {    \tt    等待   }  中睡觉，或者可能正在做其他事情；在后一种情况下，对  {    \tt    等待   }  的后续调用必须观察孩子的死亡，可能在调用  {    \tt    退出   }  很久之后。 xv6 记录子进程死亡直到  {    \tt    等待   }  观察到的方式是让  {    \tt    退出   }  将调用者置于    \indexcode{ZOMBIE}    状态，并一直保持在该状态，直到父进程的  {    \tt    等待   }  注意到它，将子进程的状态更改为  {    \tt    未使用   }  ，复制子进程的退出状态，并返回子进程的退出状态父进程的进程 ID。如果父进程在子进程之前退出，则父进程将子进程交给
-    \lstinline{init}    进程，它永久调用  {    \tt    等待   }  ；因此每个子进程都有一个父进程要在其之后进行清理。一个挑战是避免同时出现的父母和孩子之间的竞争和僵局
+    \lstinline{wakeup}    可用于多种等待。第    \ref{CH:UNIX}    章中介绍的一个有趣的示例是子进程    \indexcode{exit}    与其父进程    \indexcode{wait}    之间的交互。在子进程死亡时，父进程可能已经在  {    \tt    wait   }  中睡觉，或者可能正在做其他事情；在后一种情况下，对  {    \tt    wait   }  的后续调用必须观察子进程的死亡，可能在调用  {    \tt    exit   }  很久之后。 xv6 记录子进程死亡直到  {    \tt    wait   }  观察到的方式是让  {    \tt    exit   }  将调用者置于    \indexcode{ZOMBIE}    状态，并一直保持在该状态，直到父进程的  {    \tt    wait   }  注意到它，将子进程的状态更改为  {    \tt    UNUSED   }  ，复制子进程的退出状态，并返回子进程的退出状态父进程的进程 ID。如果父进程在子进程之前退出，则父进程将子进程交给
+    \lstinline{init}    进程，它永久调用  {    \tt    wait   }  ；因此每个子进程都有一个父进程要在其之后进行清理。一个挑战是避免同时出现的父进程和子进程之间的竞争和僵局
     \lstinline{wait}    和
     \lstinline{exit}    ，以及同时
     \lstinline{exit}    和    \lstinline{exit}    。  
@@ -515,21 +511,21 @@ Xv6的
     \lstinline{wait_lock}    和某些进程的    \lstinline{pp->lock}    ；避免死锁的顺序是先    \lstinline{wait_lock}    然后    \lstinline{pp->lock}    。  
 
    \lstinline{exit}       \lineref{kernel/proc.c:/^exit/}    记录退出状态，释放一些资源，调用    \lstinline{reparent}    将其子进程交给    \lstinline{init}    进程，唤醒父进程（如果它位于    \lstinline{wait}    中），将调用者标记为僵尸，并永久让出 CPU。    \lstinline{exit}    两者都包含
- 此序列期间的    \lstinline{wait_lock}    和    \lstinline{p->lock}   。它保存    \lstinline{wait_lock}    因为它是    \lstinline{wakeup(p->parent)}    的条件锁，防止父级
+ 此序列期间的    \lstinline{wait_lock}    和    \lstinline{p->lock}   。它保存    \lstinline{wait_lock}    因为它是    \lstinline{wakeup(p->parent)}    的条件锁，防止父进程
     \lstinline{wait}    失去唤醒。    \lstinline{exit}    必须保持
-    \lstinline{p->lock}    也适用于此序列，以防止父级
-    \lstinline{wait}    从看到孩子处于状态
+    \lstinline{p->lock}    也适用于此序列，以防止父进程
+    \lstinline{wait}    从看到子进程处于状态
     \lstinline{ZOMBIE}    在孩子最终打电话之前
     \lstinline{swtch}    。    \lstinline{exit}    按照与    \lstinline{wait}    相同的顺序获取这些锁，以避免死锁。  
 
-   \lstinline{exit}    在将其状态设置为    \lstinline{ZOMBIE}    之前唤醒父级可能看起来不正确，但这是安全的：尽管
+   \lstinline{exit}    在将其状态设置为    \lstinline{ZOMBIE}    之前唤醒父进程可能看起来不正确，但这是安全的：尽管
     \lstinline{wakeup}    可能会导致父进程运行，循环中
-    \lstinline{wait}    无法检查子级，直到子级
-    \lstinline{p->lock}    是由  {    \tt    调度程序   }  发布的，所以
+    \lstinline{wait}    无法检查子进程，直到子进程
+    \lstinline{p->lock}    是由  {    \tt    scheduler   }  发布的，所以
     \lstinline{wait}    直到很久之后才能查看退出进程
     \lstinline{exit}    已将其状态设置为
     \lstinline{ZOMBIE}   
-    \lineref{kernel/proc.c:/state.=.ZOMBIE/}    。  
+    \lineref{kernel/proc.c}{379}    。  
 
 尽管
     \lstinline{exit}    允许进程自行终止，
@@ -554,7 +550,7 @@ Xv6的
     \lstinline{sleep}    返回。一些电话
     \lstinline{sleep}    也测试
     \lstinline{p->killed}    在循环中，如果设置了则放弃当前活动。只有当这种放弃是正确的时候才会这样做。例如管道读写代码
- 如果设置了终止标志，则    \lineref{kernel/pipe.c:/myproc..-\>killed/}    返回；最终代码将返回陷阱，陷阱将再次检查    \lstinline{p->killed}    并退出。  
+如果设置了终止标志，则    \lineref{kernel/pipe.c:/myproc..-\>killed/}    返回；最终代码将返回陷阱，陷阱将再次检查    \lstinline{p->killed}    并退出。  
 
 一些xv6
     \lstinline{sleep}    循环不检查
@@ -579,7 +575,7 @@ Xv6的
 
 
    \item   与    \lstinline{p->state}    一起，它可以防止分配中的竞争
- 用于新进程的    \lstinline{proc[]}    插槽。   \item   当进程被创建或销毁时，它会隐藏进程。   \item   它阻止父级的    \lstinline{wait}    收集已将其状态设置为    \lstinline{ZOMBIE}    但尚未释放 CPU 的进程。   \item   它可以防止另一个核心的调度程序在将其状态设置为    \lstinline{RUNNABLE}    之后但在完成    \lstinline{swtch}    之前决定运行让步进程。   \item   它确保只有一个核心的调度程序决定运行
+ 用于新进程的    \lstinline{proc[]}    插槽。   \item   当进程被创建或销毁时，它会隐藏进程。   \item   它阻止父进程的    \lstinline{wait}    收集已将其状态设置为    \lstinline{ZOMBIE}    但尚未释放 CPU 的进程。   \item   它可以防止另一个核心的调度程序在将其状态设置为    \lstinline{RUNNABLE}    之后但在完成    \lstinline{swtch}    之前决定运行让步进程。   \item   它确保只有一个核心的调度程序决定运行
     \lstinline{RUNNABLE}    进程。   \item   它可以防止计时器中断导致进程在    \lstinline{swtch}    中屈服。   \item   与条件锁一起，它有助于防止    \lstinline{wakeup}    忽略正在调用    \lstinline{sleep}    但尚未完成释放 CPU 的进程。   \item   它可以防止    \lstinline{kill}    的受害进程退出，并且可能在    \lstinline{kill}    的检查之间重新分配
     \lstinline{p->pid}    并设置    \lstinline{p->killed}    。   \item   它使    \lstinline{kill}    对    \lstinline{p->state}    的检查和写入成为原子的。  \end{itemize}     
 
@@ -587,7 +583,7 @@ Xv6的
     \lstinline{wait_lock}    而不是    \lstinline{p->lock}    。只有进程的父进程会修改    \lstinline{p->parent}    ，尽管进程本身和搜索其子进程的其他进程都会读取该字段。的目的
     \lstinline{wait_lock}    是充当条件锁，当
     \lstinline{wait}    休眠等待任何子进程退出。退出的子进程保留    \lstinline{wait_lock}    或    \lstinline{p->lock}    ，直到将其状态设置为    \lstinline{ZOMBIE}    、唤醒其父进程并释放 CPU。    \lstinline{wait_lock}    还通过父进程和子进程序列化并发的    \lstinline{exit}    ，以便保证    \lstinline{init}    进程（继承子进程）从其    \lstinline{wait}    中唤醒。
-    \lstinline{wait_lock}    是一个全局锁，而不是每个父进程中的每进程锁，因为在进程获取它之前，它无法知道其父进程是谁。
+    \lstinline{wait_lock}    是一个全局锁，而不是每个父进程中的进程锁，因为在进程获取它之前，它无法知道其父进程是谁。
     \section{真实世界  }     
 
 xv6调度器实现了一个简单的调度策略，它依次运行每个进程。这个政策被称为
@@ -649,16 +645,18 @@ Xv6的支持
  
    \item   睡眠必须检查
     \lstinline{lk != &p->lock}    避免死锁
-    \linerefs{kernel/proc.c:/DOC: sleeplock0/,/^..}    /}。假设通过替换消除了特殊情况
-    \begin{lstlisting}[]if(lk != &p->lock){
-  acquire(&p->lock);
-  release(lk);
+\begin{lstlisting}[]
+if(lk != &p->lock){
+    acquire(&p->lock);
+    release(lk);
 }
 \end{lstlisting}    与
-    \begin{lstlisting}[]release(lk);acquire(&p->lock);
+\begin{lstlisting}[]
+release(lk);
+acquire(&p->lock);
 \end{lstlisting}    这样做会破坏
     \lstinline{sleep}    。如何？   \item   在 xv6 中实现信号量而不使用
-    \lstinline{sleep}    和    \lstinline{wakeup}   （但可以使用自旋锁）。将 xv6 中睡眠和唤醒的使用替换为信号量。判断结果。   \item   修复上面提到的比赛
+    \lstinline{sleep}    和    \lstinline{wakeup}   （但可以使用自旋锁）。将 xv6 中睡眠和唤醒的使用替换为信号量。判断结果。   \item   修复上面提到的竞争
     \lstinline{kill}    和
     \lstinline{sleep}    ，这样
     \lstinline{kill}    在受害者的睡眠循环检查之后发生
@@ -667,6 +665,4 @@ Xv6的支持
     \lstinline{p->killed}   ，这样，例如，virtio 驱动程序中的进程可以从 while 循环快速返回（如果它被另一个进程杀死）。   \item   修改 xv6，使其在从一个进程的内核线程切换到另一个进程的内核线程时仅使用一次上下文切换，而不是通过调度程序线程进行切换。屈服线程需要选择下一个线程本身并调用    \texttt{swtch}    。挑战在于防止多个内核意外执行同一线程；正确锁定；并避免僵局。   \item   修改xv6的
     \lstinline{scheduler}    使用 RISC-V
  当没有进程可运行时，   \lstinline{WFI}   （等待中断）指令。尝试确保只要有可运行进程等待运行，   \texttt{WFI}    中就不会暂停任何核心。  \end{enumerate}     
-
-\end{document}
 

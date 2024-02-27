@@ -1,9 +1,4 @@
 
-\documentclass[UTF8]{article}
-\usepackage{xeCJK}
-\usepackage{amsmath,amssymb}
-\begin{document}
-
    \chapter{Operating system interfaces}   
     \label{CH:UNIX}     
 
@@ -14,7 +9,7 @@
 
 本书以单个操作系统作为具体例子来说明操作系统概念。该操作系统 xv6 提供了 Ken Thompson 和 Dennis Ritchie 的 Unix 操作系统~    \cite{unix}    引入的基本接口，并模仿了 Unix 的内部设计。 Unix 提供了一个狭窄的接口，其机制结合得很好，提供了令人惊讶的通用性。这种接口非常成功，以至于现代操作系统（BSD、Linux、macOS、Solaris，甚至在较小程度上，Microsoft Windows）都具有类似 Unix 的接口。了解 xv6 是了解这些系统和许多其他系统的良好开端。  
 
-如图〜   \ref{fig:os}   所示，xv6采用传统形式
+如图~\ref{fig:os}   所示，xv6采用传统形式
     \indextext{kernel}    ，一个为正在运行的程序提供服务的特殊程序。每个正在运行的程序，称为
     \indextext{process}    ，具有包含指令、数据和堆栈的内存。这些指令实现程序的计算。数据是计算所作用的变量。堆栈组织程序的过程调用。给定的计算机通常具有许多进程，但只有一个内核。  
 
@@ -40,14 +35,13 @@ shell 是一个普通的程序，它读取用户的命令并执行它们。 shel
     \section{进程和内存  }     
 
 xv6 进程由用户空间内存（指令、数据和堆栈）和内核私有的每个进程状态组成。 Xv6
-    \indextext{time-share}    进程：它在等待执行的进程集中透明地切换可用 CPU。当进程未执行时，xv6 会保存进程的 CPU 寄存器，并在下次运行进程时恢复它们。内核关联一个进程标识符，或者
-    \indexcode{PID}    ，每个进程。  
+    \indextext{time-share}    进程：它在等待执行的进程集中透明地切换可用 CPU。当进程未执行时，xv6 会保存进程的 CPU 寄存器，并在下次运行进程时恢复它们。内核将进程标识符 (\indexcode{PID}) 与每个进程相关联。 
 
    \begin{figure}[t]
 \center
 \begin{tabular}{ll}
 {\bf System call} & {\bf Description}  \\ 
-\midruleint fork() & Create a process, return child's PID.  \\ int exit(int status) & Terminate the current process; status reported to wait(). No return.  \\ int wait(int *status) & Wait for a child to exit; exit status in *status; returns child PID.  \\ int kill(int pid) & Terminate process PID. Returns 0, or -1 for error.  \\ int getpid() & Return the current process's PID.  \\ int sleep(int n) & Pause for n clock ticks.  \\ int exec(char *file, char *argv[]) & Load a file and execute it with arguments; only returns if error.  \\ char *sbrk(int n) & Grow process's memory by n bytes. Returns start of new memory.  \\ int open(char *file, int flags) & Open a file; flags indicate read/write; returns an fd (file descriptor).  \\ int write(int fd, char *buf, int n) & Write n bytes from buf to file descriptor fd; returns n.  \\ int read(int fd, char *buf, int n) & Read n bytes into buf; returns number read; or 0 if end of file.  \\ int close(int fd) & Release open file fd.  \\ int dup(int fd) & Return a new file descriptor referring to the same file as fd. \\ int pipe(int p[]) & Create a pipe, put read/write file descriptors in p[0] and p[1].  \\ int chdir(char *dir) & Change the current directory.  \\ int mkdir(char *dir) & Create a new directory.  \\ int mknod(char *file, int, int) & Create a device file.  \\ int fstat(int fd, struct stat *st) & Place info about an open file into *st.  \\ int stat(char *file, struct stat *st) & Place info about a named file into *st.  \\ int link(char *file1, char *file2) & Create another name (file2) for the file file1.  \\ int unlink(char *file) & Remove a file.  \\ 
+\midrule int fork() & Create a process, return child's PID.  \\ int exit(int status) & Terminate the current process; status reported to wait(). No return.  \\ int wait(int *status) & Wait for a child to exit; exit status in *status; returns child PID.  \\ int kill(int pid) & Terminate process PID. Returns 0, or -1 for error.  \\ int getpid() & Return the current process's PID.  \\ int sleep(int n) & Pause for n clock ticks.  \\ int exec(char *file, char *argv[]) & Load a file and execute it with arguments; only returns if error.  \\ char *sbrk(int n) & Grow process's memory by n bytes. Returns start of new memory.  \\ int open(char *file, int flags) & Open a file; flags indicate read/write; returns an fd (file descriptor).  \\ int write(int fd, char *buf, int n) & Write n bytes from buf to file descriptor fd; returns n.  \\ int read(int fd, char *buf, int n) & Read n bytes into buf; returns number read; or 0 if end of file.  \\ int close(int fd) & Release open file fd.  \\ int dup(int fd) & Return a new file descriptor referring to the same file as fd. \\ int pipe(int p[]) & Create a pipe, put read/write file descriptors in p[0] and p[1].  \\ int chdir(char *dir) & Change the current directory.  \\ int mkdir(char *dir) & Create a new directory.  \\ int mknod(char *file, int, int) & Create a device file.  \\ int fstat(int fd, struct stat *st) & Place info about an open file into *st.  \\ int stat(char *file, struct stat *st) & Place info about a named file into *st.  \\ int link(char *file1, char *file2) & Create another name (file2) for the file file1.  \\ int unlink(char *file) & Remove a file.  \\ 
 \end{tabular}
 \caption{Xv6 系统调用。如果没有另外说明，这些调用如果没有错误则返回 0，如果有错误则返回 -1。  }
 \label{fig:api}
@@ -60,11 +54,13 @@ xv6 进程由用户空间内存（指令、数据和堆栈）和内核私有的�
     \indextext{parent}    和
     \indextext{child}    。  
 
-例如，考虑以下用 C 编程语言编写的程序片段~    \cite{kernighan}    ：
-    \begin{lstlisting}[]int pid = fork();if(pid > 0){
-  printf("parent: child=
+例如，考虑以下用 C 编程语言编写的程序片段 ~\cite{kernighan}：
+\begin{lstlisting}[]
+int pid = fork();
+if(pid > 0){
+  printf("parent: child=%d\n", pid);
   pid = wait((int *) 0);
-  printf("child 
+  printf("child %d is done\n", pid);
 } else if(pid == 0){
   printf("child: exiting\n");
   exit(0);
@@ -73,53 +69,68 @@ xv6 进程由用户空间内存（指令、数据和堆栈）和内核私有的�
 }
 \end{lstlisting}    该
     \indexcode{exit}    系统调用导致调用进程停止执行并释放内存和打开文件等资源。 Exit 采用整数状态参数，通常 0 表示成功，1 表示失败。这
-    \indexcode{wait}    系统调用返回当前进程已退出（或已杀死）的子进程的 PID，并将子进程的退出状态复制到传递给 wait 的地址；如果调用者的孩子都没有退出，
-    \indexcode{wait}    等待一个人这样做。如果调用者没有子项，   \lstinline{wait}    立即返回 -1。如果父进程不关心子进程的退出状态，它可以将 0 地址传递给
+    \indexcode{wait}    系统调用返回当前进程已退出（或被杀死）的子进程的 PID，并将子进程的退出状态复制到传递给 wait 的地址； 如果调用者的子进程都没有退出，则 \indexcode{wait}  等待其中一个退出。如果调用者没有子进程，   \lstinline{wait}    立即返回 -1。如果父进程不关心子进程的退出状态，它可以将 0 地址传递给
     \lstinline{wait}    。  
 
 在示例中，输出行
-    \begin{lstlisting}[]parent: child=1234child: exiting
-\end{lstlisting}    可能以任一顺序出现（甚至混合），具体取决于父级或子级是否到达其
- 首先调用    \indexcode{printf}   。孩子退出后，家长
-    \indexcode{wait}    返回，导致父级打印
-    \begin{lstlisting}[]parent: child 1234 is done
-\end{lstlisting}    虽然子进程最初与父进程具有相同的内存内容，但父进程和子进程使用单独的内存和单独的寄存器执行：更改其中一个变量不会影响另一个变量。例如，当返回值为
+
+\begin{lstlisting}[]
+parent: child=1234
+child: exiting
+\end{lstlisting}  
+	  
+	可能以任一顺序出现（甚至混合），具体取决于父进程或子进程是否
+ 首先调用    \indexcode{printf}   。子进程退出后，父进程
+    \indexcode{wait}    返回，导致父进程打印
+    
+\begin{lstlisting}[]
+parent: child 1234 is done
+\end{lstlisting} 
+	
+	虽然子进程最初与父进程具有相同的内存内容，但父进程和子进程使用单独的内存和单独的寄存器执行：更改其中一个变量不会影响另一个变量。例如，当返回值为
     \lstinline{wait}    存储到
     \lstinline{pid}    在父进程中，它不会更改变量
- 子项中的    \lstinline{pid}   。的价值
- 子级中的    \lstinline{pid}    仍为零。  
+ 子进程中的    \lstinline{pid}   。的值
+ 子进程中的    \lstinline{pid}    仍为零。  
 
 这
     \indexcode{exec}    系统调用使用从文件系统中存储的文件加载的新内存映像替换调用进程的内存。该文件必须具有特定的格式，该格式指定文件的哪一部分保存指令、哪一部分是数据、从哪条指令开始等。Xv6 使用 ELF 格式，第    \ref{CH:MEM}    章对此进行了更详细的讨论。通常该文件是编译程序源代码的结果。什么时候
     \indexcode{exec}   成功，它不会返回到调用程序；而是从文件加载的指令在ELF头中声明的入口点开始执行。
     \lstinline{exec}    采用两个参数：包含可执行文件的文件名和字符串参数数组。例如：
-    \begin{lstlisting}[]char *argv[3];
+   
+\begin{lstlisting}[]
+char *argv[3];
 
-argv[0] = "echo";argv[1] = "hello";argv[2] = 0;exec("/bin/echo", argv);printf("exec error\n");
-\end{lstlisting}    该片段用程序的实例替换调用程序
-    \lstinline{/bin/echo}    使用参数列表运行
+argv[0] = "echo";
+argv[1] = "hello";
+argv[2] = 0;
+exec("/bin/echo", argv);
+printf("exec error\n");
+\end{lstlisting}
+	
+	该片段使用参数列表运行
     \lstinline{echo}   
-    \lstinline{hello}   。大多数程序都会忽略参数数组的第一个元素，它通常是程序的名称。  
+    \lstinline{hello}  用程序的实例\lstinline{/bin/echo} 替换调用程序。大多数程序都会忽略参数数组的第一个元素，它通常是程序的名称。  
 
-xv6 shell 使用上述调用代表用户运行程序。外壳主要结构简单；看
+xv6 shell 使用上述调用代表用户运行程序。shell 主结构简单；看
     \lstinline{main}   
     \lineref{user/sh.c:/main/}    。主循环读取用户的一行输入
     \indexcode{getcmd}    。然后它调用
-    \lstinline{fork}    ，它创建 shell 进程的副本。家长打电话
-    \lstinline{wait}   ，当子进程运行命令时。例如，如果用户在 shell 中输入“   \lstinline{echo hello}   ”，
-    \lstinline{runcmd}    将以“   \lstinline{echo hello}   ”作为参数进行调用。
+    \lstinline{fork}    ，它创建 shell 进程的副本。父进程调用
+    \lstinline{wait}   ，当子进程运行命令时。例如，如果用户在 shell 中输入“\lstinline{echo hello}”，
+    \lstinline{runcmd}    将以“\lstinline{echo hello}”作为参数进行调用。
     \lstinline{runcmd}   
-    \lineref{user/sh.c:/runcmd/}    运行实际命令。对于“   \lstinline{echo hello}   ”，它将调用
+    \lineref{user/sh.c:/runcmd/}     运行实际命令。对于“\lstinline{echo hello}”，它将调用
     \lstinline{exec}   
     \lineref{user/sh.c:/exec.ecmd/}    。如果
     \lstinline{exec}    成功，那么子进程将执行来自
     \lstinline{echo}    而不是
     \lstinline{runcmd}    。在某一点
     \lstinline{echo}    将调用
-    \lstinline{exit}    ，这将导致父级从
-    \lstinline{wait}    中
-    \lstinline{main}   
-    \lineref{user/sh.c:/main/}    。  
+    \lstinline{exit}    ，这将导致父进程从
+      \lstinline{main}   
+      \lineref{user/sh.c:/main/}  中
+    \lstinline{wait} 返回。  
 
 你可能想知道为什么
     \indexcode{fork}    和
@@ -135,7 +146,7 @@ Xv6 隐式分配大部分用户空间内存：
     \indexcode{sbrk}    返回新内存的位置。
     \section{I/O 和文件描述符  }     
 
-A
+
     \indextext{file descriptor}    是一个小整数，表示进程可以读取或写入的内核管理对象。进程可以通过打开文件、目录或设备，或者通过创建管道，或者通过复制现有描述符来获取文件描述符。为了简单起见，我们经常将文件描述符所指的对象称为“文件”；文件描述符接口抽象出文件、管道和设备之间的差异，使它们看起来都像字节流。我们将输入和输出称为    \indextext{I/O}    。  
 
 在内部，xv6 内核使用文件描述符作为每个进程表的索引，以便每个进程都有一个从零开始的文件描述符的私有空间。按照惯例，进程从文件描述符 0（标准输入）读取，将输出写入文件描述符 1（标准输出），并将错误消息写入文件描述符 2（标准错误）。正如我们将看到的，shell 利用该约定来实现 I/O 重定向和管道。 shell 确保它始终打开三个文件描述符
@@ -155,21 +166,23 @@ A
     \lstinline{read}    。当没有更多字节可读取时，
     \lstinline{read}    返回零以指示文件结尾。  
 
-电话
+调用
     \lstinline{write(fd}    ,
     \lstinline{buf}    ,
     \lstinline{n)}    写入
     \lstinline{n}    字节来自
     \lstinline{buf}    到文件描述符
-    \lstinline{fd}    并返回写入的字节数。少于
- 仅当发生错误时才会写入    \lstinline{n}    字节。喜欢
+    \lstinline{fd}    并返回写入的字节数。
+ 仅当发生错误时才会写入少于    \lstinline{n}    字节。例如
     \lstinline{read}    ,
     \lstinline{write}    在当前文件偏移处写入数据，然后将该偏移量前进写入的字节数：每个
     \lstinline{write}    从上一个停止的地方继续。  
 
 下面的程序片段（构成了程序的本质）
     \lstinline{cat}    ）将数据从其标准输入复制到其标准输出。如果发生错误，它将向标准错误写入一条消息。
-    \begin{lstlisting}[]char buf[512];int n;
+\begin{lstlisting}[]
+char buf[512];
+int n;
 
 for(;;){
   n = read(0, buf, sizeof buf);
@@ -184,7 +197,7 @@ for(;;){
     exit(1);
   }
 }
-\end{lstlisting}    代码片段中需要注意的重要一点是
+\end{lstlisting}   代码片段中需要注意的重要一点是
     \lstinline{cat}    不知道它是从文件、控制台还是管道读取。相似地
     \lstinline{cat}    不知道它是否正在打印到控制台、文件或其他什么。文件描述符的使用以及文件描述符 0 作为输入、文件描述符 1 作为输出的约定允许简单地实现
     \lstinline{cat}    。  
@@ -197,19 +210,23 @@ for(;;){
 
 文件描述符和
     \indexcode{fork}    交互使 I/O 重定向易于实现。
-    \lstinline{fork}    复制父级的文件描述符表及其内存，以便子级以与父级完全相同的打开文件开始。系统调用
-    \indexcode{exec}    替换调用进程的内存，但保留其文件表。此行为允许 shell 通过分叉、重新打开子级中选定的文件描述符，然后调用    \lstinline{exec}    来运行新程序来实现    \indextext{I/O redirection}   。这是 shell 为命令运行的代码的简化版本
-    \lstinline{cat}   
-    \lstinline{<}   
-    \lstinline{input.txt}   ：
-    \begin{lstlisting}[]char *argv[2];
+    \lstinline{fork}    复制父进程的文件描述符表及其内存，以便子进程以与父进程完全相同的打开文件开始。系统调用
+    \indexcode{exec}    替换调用进程的内存，但保留其文件表。此行为允许 shell 通过分叉、重新打开子进程中选定的文件描述符，然后调用    \lstinline{exec}    来运行新程序来实现    \indextext{I/O redirection}   。这是 shell 为命令运行的代码的简化版本
+\lstinline{cat}
+\lstinline{<}
+\lstinline{input.txt}:
 
-argv[0] = "cat";argv[1] = 0;if(fork() == 0) {
+\begin{lstlisting}[]
+char *argv[2];
+
+argv[0] = "cat";
+argv[1] = 0;
+if(fork() == 0) {
   close(0);
   open("input.txt", O_RDONLY);
   exec("cat", argv);
 }
-\end{lstlisting}    子进程关闭文件描述符0后，
+\end{lstlisting}   子进程关闭文件描述符0后，
     \lstinline{open}    保证为新打开的文件使用该文件描述符
     \lstinline{input.txt}    ：0 将是最小的可用文件描述符。
     \lstinline{cat}    然后使用文件描述符 0（标准输入）执行，引用
@@ -221,7 +238,7 @@ xv6 shell 中 I/O 重定向的代码正是以这种方式工作的
     \lstinline{exec}    加载新程序。  
 
    \lstinline{open}    的第二个参数包含一组关闭标志（以位表示），用于控制    \lstinline{open}    的操作。可能的值在文件控制 (fcntl) 标头中定义
-    \linerefs{kernel/fcntl.h:/RDONLY/,/TRUNC/}   ：
+    \linerefs{kernel/fcntl.h}{1}{5}   ：
     \lstinline{O_RDONLY}    ,
     \lstinline{O_WRONLY}    ,
     \lstinline{O_RDWR}    ,
@@ -231,22 +248,23 @@ xv6 shell 中 I/O 重定向的代码正是以这种方式工作的
 现在应该清楚为什么它有帮助了
     \lstinline{fork}    和
     \lstinline{exec}    是单独的调用：在两者之间，shell 有机会重定向子 shell 的 I/O，而不会干扰主 shell 的 I/O 设置。人们可以想象一种假设的组合
-    \lstinline{forkexec}    系统调用，但使用此类调用进行 I/O 重定向的选项似乎很尴尬。 shell 可以在调用    \lstinline{forkexec}    之前修改自己的 I/Osetup（然后取消这些修改）；或者
+    \lstinline{forkexec}    系统调用，但使用此类调用进行 I/O 重定向的选项似乎很尴尬。 shell 可以在调用    \lstinline{forkexec}    之前修改自己的 I/O 设置（然后取消这些修改）；或者
     \lstinline{forkexec}    可以将 I/O 重定向指令作为参数；或者（最不吸引人的）每个像    \lstinline{cat}    这样的程序都可以被教导执行自己的 I/O 重定向。  
 
 虽然
-    \lstinline{fork}    复制文件描述符表，每个底层文件偏移量在父级和子级之间共享。考虑这个例子：
-    \begin{lstlisting}[]if(fork() == 0) {
+    \lstinline{fork}    复制文件描述符表，每个底层文件偏移量在父进程和子进程之间共享。考虑这个例子：
+\begin{lstlisting}[]
+if(fork() == 0) {
   write(1, "hello ", 6);
   exit(0);
 } else {
   wait(0);
   write(1, "world\n", 6);
 }
-\end{lstlisting}    在此片段的末尾，附加到文件描述符 1 的文件将包含数据
+\end{lstlisting}   在此片段的末尾，附加到文件描述符 1 的文件将包含数据
     \lstinline{hello}   
     \lstinline{world}    。这
- 父级中的    \lstinline{write}    （这要归功于
+ 父进程中的    \lstinline{write}    （这要归功于
     \lstinline{wait}   ，仅在子进程完成后运行）拾取子进程的位置
     \lstinline{write}    已停止。此行为有助于从 shell 命令序列中生成顺序输出，例如
     \lstinline{(echo}   
@@ -260,9 +278,11 @@ xv6 shell 中 I/O 重定向的代码正是以这种方式工作的
     \lstinline{fork}    做。这是另一种写法
     \lstinline{hello}   
     \lstinline{world}    到文件中：
-    \begin{lstlisting}[]fd = dup(1);write(1, "hello ", 6);write(fd, "world\n", 6);
-\end{lstlisting}     
-
+\begin{lstlisting}[]
+fd = dup(1);
+write(1, "hello ", 6);
+write(fd, "world\n", 6);
+\end{lstlisting}
 如果两个文件描述符是通过一系列从同一个原始文件描述符派生而来的，则它们共享一个偏移量
     \lstinline{fork}    和
     \lstinline{dup}    调用。否则文件描述符不共享偏移量，即使它们是由
@@ -280,16 +300,20 @@ xv6 shell 中 I/O 重定向的代码正是以这种方式工作的
 文件描述符是一个强大的抽象，因为它们隐藏了它们所连接的内容的详细信息：写入文件描述符 1 的进程可能正在写入文件、控制台等设备或管道。
     \section{管道  }     
 
-A
+
     \indextext{pipe}    是一个小型内核缓冲区，作为一对文件描述符向进程公开，一个用于读取，一个用于写入。将数据写入管道的一端使得该数据可用于从管道的另一端读取。管道为进程提供了一种通信方式。  
 
 下面的示例代码运行程序
     \lstinline{wc}    具有连接到管道读取端的标准输入。
-    \begin{lstlisting}[]int p[2];char *argv[2];
+\begin{lstlisting}[]
+int p[2];
+char *argv[2];
 
-argv[0] = "wc";argv[1] = 0;
+argv[0] = "wc";
+argv[1] = 0;
 
-pipe(p);if(fork() == 0) {
+pipe(p);
+if(fork() == 0) {
   close(0);
   dup(p[0]);
   close(p[0]);
@@ -300,13 +324,13 @@ pipe(p);if(fork() == 0) {
   write(p[1], "hello world\n", 12);
   close(p[1]);
 }
-\end{lstlisting}    程序调用
+\end{lstlisting}   程序调用
     \lstinline{pipe}    ，创建一个新管道并将读写文件描述符记录在数组中
     \lstinline{p}    。后
-    \lstinline{fork}    ，父级和子级都有引用管道的文件描述符。子进程调用   \lstinline{close}   和   \lstinline{dup}   使文件描述符zero指向管道的读取端，关闭文件描述符
+    \lstinline{fork}    ，父进程和子进程都有引用管道的文件描述符。子进程调用   \lstinline{close}   和   \lstinline{dup}   使文件描述符zero指向管道的读取端，关闭文件描述符
     \lstinline{p}    ，并调用   \lstinline{exec}   运行
     \lstinline{wc}    。什么时候
-    \lstinline{wc}    从其标准输入读取，从管道读取。父级关闭管道的读取端，写入管道，然后关闭写入端。  
+    \lstinline{wc}    从其标准输入读取，从管道读取。父进程关闭管道的读取端，写入管道，然后关闭写入端。  
 
 如果没有可用数据，则
  管道上的    \lstinline{read}    等待数据写入或引用写入端的所有文件描述符关闭；在后一种情况下，
@@ -332,16 +356,20 @@ xv6 shell 实现了诸如
     \lstinline{c}    ）。因此，shell 可以创建进程树。这棵树的叶子是命令，内部节点是等待左右子节点完成的进程。  
 
 管道可能看起来并不比临时文件更强大：管道
-    \begin{lstlisting}[]echo hello world | wc
+\begin{lstlisting}[]
+echo hello world | wc
 \end{lstlisting}    可以在没有管道的情况下实现，如下所示
- 在这种情况下，   \begin{lstlisting}[]echo hello world >/tmp/xyz; wc </tmp/xyz
-\end{lstlisting}    管道比临时文件至少具有三个优点。首先，管道会自动清理自身；通过文件重定向，shell 必须小心地删除
- 完成后    \lstinline{/tmp/xyz}   。其次，管道可以传递任意长的数据流，而文件重定向需要磁盘上有足够的可用空间来存储所有数据。第三，管道允许并行执行管道阶段，而文件方法要求第一个程序在第二个程序开始之前完成。
+ 在这种情况下，   
+ \begin{lstlisting}[]
+ echo hello world >/tmp/xyz; wc </tmp/xyz
+\end{lstlisting}    
+管道比临时文件至少具有三个优点。首先，管道会自动清理自身；通过文件重定向，shell 必须在完成后小心地删除
+     \lstinline{/tmp/xyz}   。其次，管道可以传递任意长的数据流，而文件重定向需要磁盘上有足够的可用空间来存储所有数据。第三，管道允许并行执行管道阶段，而文件方法要求第一个程序在第二个程序开始之前完成。
     \section{文件系统  }     
 
 xv6 文件系统提供数据文件（包含未解释的字节数组）和目录（包含对数据文件和其他目录的命名引用）。这些目录形成一棵树，从一个称为
-    \indextext{root}    。 A
-    \indextext{path}    喜欢
+    \indextext{root}    。 一个
+    \indextext{path}    例如
     \lstinline{/a/b/c}    指的是名为的文件或目录
     \lstinline{c}    位于名为的目录中
     \lstinline{b}    位于名为的目录中
@@ -350,7 +378,10 @@ xv6 文件系统提供数据文件（包含未解释的字节数组）和目录�
     \lstinline{/}    是相对于调用进程的进行评估的
     \indextext{current directory}    ，可以使用以下命令更改
     \lstinline{chdir}    系统调用。这两个代码片段都打开同一个文件（假设所有涉及的目录都存在）：
-    \begin{lstlisting}[]chdir("/a");chdir("b");open("c", O_RDONLY);
+\begin{lstlisting}[]
+chdir("/a");
+chdir("b");
+open("c", O_RDONLY);
 
 open("/a/b/c", O_RDONLY);
 \end{lstlisting}    第一个片段将进程的当前目录更改为
@@ -361,7 +392,11 @@ open("/a/b/c", O_RDONLY);
     \lstinline{open}    与
     \lstinline{O_CREATE}    标志创建一个新的数据文件，并且
     \lstinline{mknod}    创建一个新的设备文件。此示例说明了所有三个：
-    \begin{lstlisting}[]mkdir("/dir");fd = open("/dir/file", O_CREATE|O_WRONLY);close(fd);mknod("/console", 1, 1);
+\begin{lstlisting}[]
+mkdir("/dir");
+fd = open("/dir/file", O_CREATE|O_WRONLY);
+close(fd);
+mknod("/console", 1, 1);
 \end{lstlisting}   
     \lstinline{mknod}    创建一个引用设备的特殊文件。与设备文件关联的是主设备号和次设备号（这两个参数
     \lstinline{mknod}    ），唯一标识一个内核设备。当进程稍后打开设备文件时，内核会转移
@@ -378,7 +413,7 @@ open("/a/b/c", O_RDONLY);
     \lstinline{struct}   
     \lstinline{stat}    ，定义于
     \lstinline{stat.h}       \fileref{kernel/stat.h}    为：
-    \begin{lstlisting}[]
+\begin{lstlisting}[]
 #define T_DIR     1   // Directory
 #define T_FILE    2   // File
 #define T_DEVICE  3   // Device
@@ -396,7 +431,9 @@ struct stat {
     \lstinline{link}    系统调用创建另一个文件系统名称，引用与现有文件相同的 inode。该片段创建一个名为both 的新文件
     \lstinline{a}    和
     \lstinline{b}    。
-    \begin{lstlisting}[]open("a", O_CREATE|O_WRONLY);link("a", "b");
+\begin{lstlisting}[]
+open("a", O_CREATE|O_WRONLY);
+link("a", "b");
 \end{lstlisting}    读取或写入
     \lstinline{a}    与读取或写入相同
     \lstinline{b}    。每个索引节点都由唯一的索引节点号标识。经过上面的代码序列，可以确定
@@ -407,10 +444,13 @@ struct stat {
 
 这
     \lstinline{unlink}    系统调用从文件系统中删除名称。仅当文件的链接计数为零并且没有文件描述符引用它时，文件的索引节点和保存其内容的磁盘空间才会被释放。因此添加
-    \begin{lstlisting}[]unlink("a");
+\begin{lstlisting}[]
+unlink("a");
 \end{lstlisting}    到最后一个代码序列使 inode 和文件内容可访问为
     \lstinline{b}    。此外，
-    \begin{lstlisting}[]fd = open("/tmp/xyz", O_CREATE|O_RDWR);unlink("/tmp/xyz");
+\begin{lstlisting}[]
+fd = open("/tmp/xyz", O_CREATE|O_RDWR);
+unlink("/tmp/xyz");
 \end{lstlisting}    是创建没有名称的临时索引节点的惯用方法，该索引节点将在进程关闭时被清理
     \lstinline{fd}    或退出。  
 
@@ -425,7 +465,7 @@ Unix 提供了可从 shellas 用户级程序调用的文件实用程序，例如
     \lstinline{cd}    必须更改 shell 本身的当前工作目录。如果
     \lstinline{cd}    作为常规命令运行，然后 shell 会分叉一个子进程，子进程将运行
     \lstinline{cd}    和
-    \lstinline{cd}    将更改子进程的工作目录。父级（即 shell 的）工作目录不会更改。
+    \lstinline{cd}    将更改子进程的工作目录。父进程（即 shell 的）工作目录不会更改。
     \section{真实世界  }     
 
 Unix 将“标准”文件描述符、管道和对其进行操作的方便的 shell 语法相结合，这是编写通用可重用程序的一大进步。这个想法引发了一种“软件工具”文化，这种文化对 Unix 的强大和普及负有重要责任，而 shell 是第一个所谓的“脚本语言”。Unix 系统调用接口至今仍然存在于 BSD 等系统中， Linux 和 macOS。  
@@ -447,5 +487,4 @@ Xv6 不提供用户或保护一个用户免受另一个用户侵害的概念；�
 
    \item   编写一个程序，使用 UNIX 系统调用通过一对管道（每个方向一个）在两个进程之间“乒乓”一个字节。衡量程序的性能，以每秒的交换次数为单位。  \end{enumerate}     
 
-\end{document}
 

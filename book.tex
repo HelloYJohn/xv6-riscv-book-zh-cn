@@ -24,9 +24,7 @@
 \lstset{morecomment=[is]{[[[}{]]]}}
 \lstset{escapeinside={(*@}{@*)}}
 \lstset{xleftmargin=5.0ex}
-
 \newcommand{\github}{https://github.com/mit-pdos/xv6-riscv/blob/riscv/}
-
 \newcommand{\fileref}[1]{\href{\github/#1}{\small{(#1)}}}
 \newcommand{\lineref}[2]{\href{\github/#1\#L#2}{\small{(#1:#2)}}}
 \newcommand{\linerefs}[3]{\href{\github/#1\#L#2-L#3}{\small(#1:#2-#3)}}
@@ -34,8 +32,6 @@
 \newcommand{\indextext}[1]{\textit{#1}\index{#1}}
 \newcommand{\indextextx}[1]{{#1}\index{#1}}
 \newcommand{\indexcode}[1]{\lstinline{#1}\index{#1@\lstinline{#1}}}
-
-%% editing markup
 \newcommand{\insertnote}[3]{\noindent\textcolor{#1}{\textbf{#2:} #3}}
 \newcommand{\note}[1]{\insertnote{blue}{NOTE}{#1}}
 \newcommand{\rtm}[1]{\insertnote{red}{RTM}{#1}}
@@ -54,7 +50,7 @@
 
    \tableofcontents     
 
-    \input{latex.out/acks}   
+   \input{latex.out/acks}   
     \input{latex.out/unix}   
     \input{latex.out/first}   
     \input{latex.out/mem}   

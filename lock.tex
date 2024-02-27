@@ -1,8 +1,4 @@
 
-\documentclass[UTF8]{article}
-\usepackage{xeCJK}
-\usepackage{amsmath,amssymb}
-\begin{document}
 
    \chapter{Locking}   
     \label{CH:LOCK}     
@@ -15,7 +11,7 @@
 Xv6根据情况使用了多种并发控制技术；还有更多可能。本章重点介绍一种广泛使用的技术：   \indextext{lock}   。锁提供互斥，确保一次只有一个 CPU 可以持有该锁。如果程序员为每个共享数据项关联一个锁，并且代码在使用某个项时始终持有关联的锁，那么该项一次只能由一个 CPU 使用。在这种情况下，我们说锁保护了数据项。尽管锁是一种易于理解的并发控制机制，但锁的缺点是它们会限制性能，因为它们会串行化并发操作。  
 
 本章的其余部分解释了为什么 xv6 需要锁、xv6 如何实现它们以及如何使用它们。
-    \section{比赛  }     
+    \section{竞争  }     
 
    \begin{figure}[t]
 \center
@@ -25,10 +21,10 @@ Xv6根据情况使用了多种并发控制技术；还有更多可能。本章�
 \end{figure}     
 
 作为我们为什么需要锁的一个例子，考虑两个带有退出子进程的进程
- 两个不同 CPU 上的  {    \tt    等待   } 。  {    \tt    等待   }  释放子进程的内存。因此每个CPU，内核都会调用 {    \tt    kfree   } 来释放子进程的内存页面。内核分配器维护一个链表：   \lstinline{kalloc()}       \lineref{kernel/kalloc.c:/^kalloc/}    从空闲页列表中弹出一页内存，   \lstinline{kfree()}   
-    \lineref{kernel/kalloc.c:/^kfree/}    将页面推送到空闲列表上。为了获得最佳性能，我们可能希望两个父进程的  {    \tt    kfree   }  能够并行执行，而不必等待另一个，但考虑到 xv6 的  {    \tt    kfree   }  实现，这是不正确的。  
+ 两个不同 CPU 上的  {    \tt    wait   } 。  {    \tt    wait   }  释放子进程的内存。因此每个CPU，内核都会调用 {    \tt    kfree   } 来释放子进程的内存页面。内核分配器维护一个链表：   \lstinline{kalloc()}       \lineref{kernel/kalloc.c:/^kalloc/}    从空闲页列表中弹出一页内存，   \lstinline{kfree()}   
+ \lineref{kernel/kalloc.c:/^kfree/}    将页面推送到空闲列表上。为了获得最佳性能，我们可能希望两个父进程的  {    \tt    kfree   }  能够并行执行，而不必等待另一个，但考虑到 xv6 的  {    \tt    kfree   }  实现，这是不正确的。  
 
-图〜   \ref{fig:smp}   更详细地说明了该设置：空闲页面的链接列表位于由两个CPU共享的内存中，这两个CPU使用加载和存储指令来操作该列表。 （实际上，处理器有缓存，但从概念上讲，多处理器系统的行为就好像有一个共享内存一样。）如果没有并发请求，您可以实现列表    \lstinline{push}    操作，如下所示：
+图~\ref{fig:smp}   更详细地说明了该设置：空闲页面的链接列表位于由两个CPU共享的内存中，这两个CPU使用加载和存储指令来操作该列表。 （实际上，处理器有缓存，但从概念上讲，多处理器系统的行为就好像有一个共享内存一样。）如果没有并发请求，您可以实现列表    \lstinline{push}    操作，如下所示：
     \begin{lstlisting}[numbers=left,firstnumber=1]
     struct element {
       int data;
@@ -52,15 +48,15 @@ Xv6根据情况使用了多种并发控制技术；还有更多可能。本章�
    \begin{figure}[t]
 \center
 \includegraphics[scale=0.5]{fig/race.pdf}
-\caption{比赛示例  }
+\caption{竞争示例  }
 \label{fig:race}
 \end{figure}    如果单独执行，此实现是正确的。但是，如果同时执行多个副本，则代码不正确。如果有两个CPU执行
-    \lstinline{push}    同时，两者都可能执行 line~    \ref{line:next}    （如图~    \ref{fig:smp}    所示），然后再执行 line~    \ref{line:list}    ，这会导致错误的结果，如图~    \ref{fig:race}    所示。然后会有twolist元素
+    \lstinline{push}    同时，两者都可能执行 line~\ref{line:next}    （如图~\ref{fig:smp}    所示），然后再执行 line~\ref{line:list}    ，这会导致错误的结果，如图~\ref{fig:race}    所示。然后会有twolist元素
     \lstinline{next}    设置为以前的值
     \lstinline{list}   。当两个任务分配到
-    \lstinline{list}    发生在 ~    \ref{line:list}    行，第二个将覆盖第一个；第一个赋值涉及的元素将丢失。  
+    \lstinline{list}    发生在 ~\ref{line:list}    行，第二个将覆盖第一个；第一个赋值涉及的元素将丢失。  
 
-行 ~    \ref{line:list}    处丢失的更新是一个示例
+行 ~\ref{line:list}    处丢失的更新是一个示例
     \indextext{race}    。竞争是一种同时访问内存位置且至少一次访问是写入的情况。竞争通常是错误的迹象，要么是更新丢失（如果访问是写入），要么是读取未完全更新的数据结构。竞争的结果取决于编译器生成的机器代码、所涉及的两个 CPU 的时序以及内存系统如何排序它们的内存操作，这可能会使竞争引起的错误难以重现和调试。例如，调试时添加打印语句
     \lstinline{push}    可能会改变执行的时间，足以使竞争消失。  
 
@@ -92,10 +88,10 @@ Xv6根据情况使用了多种并发控制技术；还有更多可能。本章�
 当我们说锁保护数据时，我们真正的意思是锁保护一些适用于数据的不变量集合。不变量是跨操作维护的数据结构的属性。通常，操作的正确行为取决于操作开始时不变量是否为真。该操作可能会暂时违反不变量，但必须在完成之前重新建立它们。例如，在链表情况下，不变量是
     \lstinline{list}    指向列表中的第一个元素，并且每个元素的
     \lstinline{next}    字段指向下一个元素。实施
-    \lstinline{push}    暂时违反了这个不变量：在~    \ref{line:next1}    行中，
+    \lstinline{push}    暂时违反了这个不变量：在~\ref{line:next1}    行中，
     \lstinline{l}    指向下一个列表元素，但是
     \lstinline{list}    没有指向
-    \lstinline{l}    尚未（在 ~    \ref{line:list1}    行重新建立）。我们上面检查的竞争之所以发生，是因为第二个 CPU 执行了依赖于列表不变量的代码，而它们（暂时）被违反了。正确使用锁可以确保一次只有一个 CPU 可以对临界区中的数据结构进行操作，这样当数据结构的不变量不成立时，没有 CPU 会执行该数据结构操作。  
+    \lstinline{l}    尚未（在 ~\ref{line:list1}    行重新建立）。我们上面检查的竞争之所以发生，是因为第二个 CPU 执行了依赖于列表不变量的代码，而它们（暂时）被违反了。正确使用锁可以确保一次只有一个 CPU 可以对临界区中的数据结构进行操作，这样当数据结构的不变量不成立时，没有 CPU 会执行该数据结构操作。  
 
 你可以把锁想象成
     \indextext{serializing}    并发关键部分，以便它们一次运行一个，从而保留不变量（假设关键部分单独正确）。您还可以将由同一锁保护的关键部分视为彼此之间的原子性，以便每个关键部分只能看到较早关键部分的完整更改集，而永远不会看到部分完成的更新。  
@@ -104,7 +100,7 @@ Xv6根据情况使用了多种并发控制技术；还有更多可能。本章�
 
 锁的放置对于性能也很重要。例如，移动是正确的
  早些时候的    \lstinline{acquire}   
-    \lstinline{push}    ，在行~    \ref{line:malloc}    之前。但这可能会降低性能，因为随后的调用
+    \lstinline{push}    ，在行~\ref{line:malloc}    之前。但这可能会降低性能，因为随后的调用
     \lstinline{malloc}    将被序列化。下面的“使用锁”部分提供了一些关于插入位置的指南
     \lstinline{acquire}    和
     \lstinline{release}    调用。
@@ -123,11 +119,11 @@ Xv6根据情况使用了多种并发控制技术；还有更多可能。本章�
        }
      }
    }
-\end{lstlisting}    不幸的是，此实现不能保证多处理器上的互斥。可能会发生两个 CPU 同时到达线 ~    \ref{line:testlocked}    ，请参阅
-    \lstinline{lk->locked}    为零，然后两者都通过执行 line~    \ref{line:assign}    来获取锁。此时，两个不同的CPU持有锁，这违反了互斥性质。我们需要的是一种使    \ref{line:testlocked}    和    \ref{line:assign}    行作为
+\end{lstlisting}    不幸的是，此实现不能保证多处理器上的互斥。可能会发生两个 CPU 同时到达线 ~\ref{line:testlocked}    ，请参阅
+    \lstinline{lk->locked}    为零，然后两者都通过执行 line~\ref{line:assign}    来获取锁。此时，两个不同的CPU持有锁，这违反了互斥性质。我们需要的是一种使    \ref{line:testlocked}    和    \ref{line:assign}    行作为
     \indextext{atomic}   （即不可分割的）步骤。  
 
-由于锁被广泛使用，多核处理器通常提供实现原子版本的指令~    \ref{line:testlocked}    和    \ref{line:assign}    。在 RISC-V 上，这条指令是
+由于锁被广泛使用，多核处理器通常提供实现原子版本的指令~\ref{line:testlocked}    和    \ref{line:assign}    。在 RISC-V 上，这条指令是
     \lstinline{amoswap r, a}    。
     \lstinline{amoswap}    读取内存地址  {    \tt    a   }  处的值，将寄存器  {    \tt    r   }  的内容写入该地址，并将读取到的值放入  {    \tt    r   }  中。也就是说，它交换了寄存器的内容和内存地址。它以原子方式执行此序列，使用特殊硬件来防止任何其他 CPU 使用读取和写入之间的内存地址。  
 
@@ -166,17 +162,17 @@ Xv6的
 上面的规则说明了何时需要锁，但没有提及何时不需要锁，并且不要锁太多对于效率很重要，因为锁会降低并行性。如果并行性不重要，那么可以安排只有一个线程而不用担心锁。简单的内核可以在多处理器上通过拥有一个锁来做到这一点，该锁必须在进入内核时获取并在退出内核时释放（尽管会阻塞系统调用，例如管道读取或
     \lstinline{wait}    会造成问题）。许多单处理器操作系统已使用这种方法转换为在多处理器上运行，有时称为“大内核锁”，但该方法牺牲了并行性：一次只有一个 CPU 可以在内核中执行。如果内核执行任何繁重的计算，那么使用更大的一组更细粒度的锁会更有效，以便内核可以同时在多个CPU上执行。  
 
-作为粗粒度锁定的示例，xv6 的    \lstinline{kalloc.c}    分配器具有受单个锁保护的单个空闲列表。如果不同 CPU 上的多个进程尝试同时分配页面，则每个进程都必须通过在  {    \tt    获取   }  中旋转来等待轮到它。旋转会浪费 CPU 时间，因为它不是有用的工作。如果锁争用浪费了很大一部分 CPU 时间，也许可以通过更改分配器设计来提高性能，使其具有多个空闲列表，每个列表都有自己的锁，以允许真正的并行分配。  
+作为粗粒度锁定的示例，xv6 的    \lstinline{kalloc.c}    分配器具有受单个锁保护的单个空闲列表。如果不同 CPU 上的多个进程尝试同时分配页面，则每个进程都必须通过在  {    \tt    acquire   }  中旋转来等待轮到它。旋转会浪费 CPU 时间，因为它不是有用的工作。如果锁争用浪费了很大一部分 CPU 时间，也许可以通过更改分配器设计来提高性能，使其具有多个空闲列表，每个列表都有自己的锁，以允许真正的并行分配。  
 
 作为细粒度锁定的一个示例，xv6 对每个文件都有一个单独的锁，因此操作不同文件的进程通常可以继续执行而无需等待彼此的锁。如果希望允许进程同时写入同一文件的不同区域，则可以使文件锁定方案变得更加细粒度。最终，锁粒度决策需要由性能测量和复杂性考虑来驱动。  
 
-后续章节在解释 xv6 的各个部分时，会提到 xv6 使用锁来处理并发的示例。作为预览，图~    \ref{fig:locktable}    列出了 xv6 中的所有锁。  
+后续章节在解释 xv6 的各个部分时，会提到 xv6 使用锁来处理并发的示例。作为预览，图~\ref{fig:locktable}    列出了 xv6 中的所有锁。  
 
    \begin{figure}[t]
 \center
 \begin{tabular}{ll}
 {\bf Lock} & {\bf Description}  \\ 
-\midrulebcache.lock & Protects allocation of block buffer cache entries  \\ cons.lock & Serializes access to console hardware, avoids intermixed output  \\ ftable.lock & Serializes allocation of a struct file in file table  \\ itable.lock & Protects allocation of in-memory inode entries  \\ vdisk\_lock & Serializes access to disk hardware and queue of DMA descriptors  \\ kmem.lock & Serializes allocation of memory  \\ log.lock & Serializes operations on the transaction log  \\ pipe's pi->lock & Serializes operations on each pipe  \\ pid\_lock & Serializes increments of next\_pid  \\ proc's p->lock & Serializes changes to process's state  \\ wait\_lock & Helps wait avoid lost wakeups  \\ tickslock & Serializes operations on the ticks counter  \\ inode's ip->lock & Serializes operations on each inode and its content  \\ buf's b->lock & Serializes operations on each block buffer  \\ 
+\midrule bcache.lock & Protects allocation of block buffer cache entries  \\ cons.lock & Serializes access to console hardware, avoids intermixed output  \\ ftable.lock & Serializes allocation of a struct file in file table  \\ itable.lock & Protects allocation of in-memory inode entries  \\ vdisk\_lock & Serializes access to disk hardware and queue of DMA descriptors  \\ kmem.lock & Serializes allocation of memory  \\ log.lock & Serializes operations on the transaction log  \\ pipe's pi->lock & Serializes operations on each pipe  \\ pid\_lock & Serializes increments of next\_pid  \\ proc's p->lock & Serializes changes to process's state  \\ wait\_lock & Helps wait avoid lost wakeups  \\ tickslock & Serializes operations on the ticks counter  \\ inode's ip->lock & Serializes operations on each inode and its content  \\ buf's b->lock & Serializes operations on each block buffer  \\ 
 \end{tabular}
 \caption{锁定 xv6  }
 \label{fig:locktable}
@@ -185,7 +181,7 @@ Xv6的
 
 Xv6 有许多长度为 2 的锁顺序链，涉及每个进程锁（每个进程中的锁）
     \lstinline{struct proc}    ）由于这样的方式
-    \lstinline{sleep}    有效（参见章节~    \ref{CH:SCHED}    ）。例如，
+    \lstinline{sleep}    有效（参见章节~\ref {CH:SCHED}    ）。例如，
     \lstinline{consoleintr}   
     \lineref{kernel/console.c:/^consoleintr/}    是处理键入字符的中断例程。当换行符到达时，任何正在等待控制台输入的进程都应该被唤醒。去做这个，
     \lstinline{consoleintr}    成立
@@ -193,11 +189,11 @@ Xv6 有许多长度为 2 的锁顺序链，涉及每个进程锁（每个进程�
     \indexcode{wakeup}    ，它获取等待进程的锁以唤醒它。因此，全局死锁避免锁顺序包括以下规则：
  必须在任何进程锁之前获取    \lstinline{cons.lock}   。文件系统代码包含 xv6 最长的锁链。例如，创建文件需要同时持有目录上的锁、新文件的 inode 上的锁、磁盘块缓冲区上的锁、磁盘驱动程序的    \lstinline{vdisk_lock}    和调用进程的    \lstinline{p->lock}    。为了避免死锁，文件系统代码始终按照上一句中提到的顺序获取锁。  
 
-遵守全球避免僵局的秩序可能异常困难。有时，锁定顺序与逻辑程序结构冲突，例如，代码模块 M1 可能调用模块 M2，但锁定顺序要求先获取 M2 中的锁，然后再获取 M1 中的锁。有时，锁的身份事先并不知道，也许是因为必须持有一个锁才能发现下一个要获取的锁的身份。这种情况出现在文件系统中，因为它在路径名中查找连续的组件，并且在  {    \tt    等待   }  和  {    \tt    退出   }  的代码中，当它们搜索进程表以查找子进程时。最后，死锁的危险通常是对锁定方案的细粒度程度的限制，因为更多的锁通常意味着更多的死锁机会。避免死锁的需要通常是内核实现的一个主要因素。  
+遵守全球避免僵局的秩序可能异常困难。有时，锁定顺序与逻辑程序结构冲突，例如，代码模块 M1 可能调用模块 M2，但锁定顺序要求先获取 M2 中的锁，然后再获取 M1 中的锁。有时，锁的身份事先并不知道，也许是因为必须持有一个锁才能发现下一个要获取的锁的身份。这种情况出现在文件系统中，因为它在路径名中查找连续的组件，并且在  {    \tt    wait   }  和  {    \tt    exit   }  的代码中，当它们搜索进程表以查找子进程时。最后，死锁的危险通常是对锁定方案的细粒度程度的限制，因为更多的锁通常意味着更多的死锁机会。避免死锁的需要通常是内核实现的一个主要因素。  
 
    \section{可重入锁  }     
 
-使用    \indextext{re-entrant locks}   （也称为    \indextext{recursive locks}   ）似乎可以避免一些死锁和锁排序挑战。这个想法是，如果锁被一个进程持有，并且该进程尝试再次获取锁，那么内核可以允许这样做（因为该进程已经拥有锁），而不是像 xv6 内核那样调用恐慌。  
+使用    \indextext{re-entrant locks}   （也称为    \indextext{recursive locks}   ）似乎可以避免一些死锁和锁排序挑战。这个想法是，如果锁被一个进程持有，并且该进程尝试再次获取锁，那么内核可以允许这样做（因为该进程已经拥有锁），而不是像 xv6 内核那样调用Panic。  
 
 然而，事实证明，可重入锁使推理并发性变得更加困难：可重入锁打破了锁导致临界区相对于其他临界区是原子的直觉。考虑以下两个函数    \lstinline{f}    和
     \lstinline{g}   ：  
@@ -232,7 +228,7 @@ g() {
 
 如果不允许重入锁，则    \lstinline{h}    调用
     \lstinline{g}    会导致死锁，这也不是很好。但是，假设调用将是一个严重的错误
-    \lstinline{call_once}    ，最好是死锁。内核开发人员将观察死锁（内核恐慌），并可以修复代码以避免死锁，同时调用
+    \lstinline{call_once}    ，最好是死锁。内核开发人员将观察死锁（内核Panic），并可以修复代码以避免死锁，同时调用
     \lstinline{call_once}    两次可能会默默地导致难以追踪的错误。  
 
 为此，xv6 使用了更容易理解的不可重入锁。然而，只要程序员牢记锁定规则，任何一种方法都可以发挥作用。如果 xv6 要使用重入锁，则必须修改    \lstinline{acquire}    才能注意到该锁当前由调用线程持有。还必须向 struct spinlock 添加嵌套获取的计数，其风格与    \lstinline{push_off}    类似，这将在接下来讨论。  
@@ -247,12 +243,12 @@ g() {
     \lineref{kernel/sysproc.c:/ticks0.=.ticks/}   。锁
     \indexcode{tickslock}    序列化这两个访问。  
 
-自旋锁和中断的相互作用会带来潜在的危险。认为
-    \indexcode{sys_sleep}    成立
+自旋锁和中断的相互作用会带来潜在的危险。假如
+    \indexcode{sys_sleep}    持有
     \indexcode{tickslock}   ，其CPU被定时器中断中断。
     \lstinline{clockintr}    会尝试获取
     \lstinline{tickslock}    ，看到它被持有，并等待它被释放。在这个情况下，
-    \lstinline{tickslock}    永远不会发布：仅
+    \lstinline{tickslock}    永远不会被释放：仅
     \lstinline{sys_sleep}   可以释放它，但是
     \lstinline{sys_sleep}    将不会继续运行，直到
     \lstinline{clockintr}    返回。因此，CPU 将发生死锁，并且任何需要任一锁的代码也将冻结。  
@@ -284,8 +280,8 @@ g() {
 人们很自然地认为程序是按照源代码语句出现的顺序执行的。对于单线程代码来说，这是一个合理的心理模型，但当多个线程通过共享内存交互时，这是不正确的~    \cite{riscv:user,boehm04}    。原因之一是编译器发出加载和存储指令的顺序与源代码所暗示的顺序不同，并且可能完全省略它们（例如通过在寄存器中缓存数据）。另一个原因是CPU可能会乱序执行指令以提高性能。例如，CPU 可能会注意到指令 A 和 B 的串行序列中并不相互依赖。 CPU 可能会首先启动指令 B，要么是因为其输入在 A 的输入之前准备好，要么是为了重叠执行 A 和 B。  
 
 作为可能出错的示例，在这段代码中
-    \lstinline{push}    ，如果编译器或 CPU 将对应于 line~    \ref{line:next2}    的存储移动到该行之后的点，那将是一场灾难
-    \lstinline{release}   上线~    \ref{line:release}   ：
+    \lstinline{push}    ，如果编译器或 CPU 将对应于 line~\ref{line:next2}    的存储移动到该行之后的点，那将是一场灾难
+    \lstinline{release}   上线~\ref{line:release}   ：
     \begin{lstlisting}[numbers=left,firstnumber=1]
       l = malloc(sizeof *l);
       l->data = data;
@@ -305,15 +301,15 @@ g() {
     \lstinline{release}       \lineref{kernel/spinlock.c:/^release/}    。
     \lstinline{__sync_synchronize()}    是    \indextext{memory barrier}    ：它告诉编译器和 CPU 不要跨障碍重新排序加载或存储。 xv6 中的障碍
     \lstinline{acquire}    和
-    \lstinline{release}    在几乎所有重要的情况下都强制执行顺序，因为 xv6 在共享数据的访问周围使用锁。第~    \ref{CH:LOCK2}    章讨论了一些例外情况。
+    \lstinline{release}    在几乎所有重要的情况下都强制执行顺序，因为 xv6 在共享数据的访问周围使用锁。第~\ref{CH:LOCK2}    章讨论了一些例外情况。
     \section{睡眠锁  }     
 
-有时xv6需要长时间持有锁。例如，文件系统（Chapter~    \ref{CH:FS}   ）在磁盘上读取和写入文件内容时保持文件锁定，这些磁盘操作可能需要数十毫秒。如果另一个进程想要获取自旋锁，那么长时间持有该自旋锁会导致浪费，因为获取进程会在自旋时长时间浪费 CPU。自旋锁的另一个缺点是进程在保留自旋锁的同时无法让出 CPU。我们希望这样做，以便其他进程可以在拥有锁的进程等待磁盘时使用 CPU。持有自旋锁时让出是非法的，因为如果第二个线程随后尝试获取自旋锁，可能会导致死锁；由于  {    \tt    获取   }  不让出 CPU，第二个线程的自旋可能会阻止第一个线程运行并释放锁。在持有锁时让出也会违反在持有自旋锁时中断必须关闭的要求。因此，我们需要一种在等待获取时让出 CPU，并在持有锁时允许让出（和中断）的锁。  
+有时xv6需要长时间持有锁。例如，文件系统（Chapter~\ref{CH:FS}   ）在磁盘上读取和写入文件内容时保持文件锁定，这些磁盘操作可能需要数十毫秒。如果另一个进程想要获取自旋锁，那么长时间持有该自旋锁会导致浪费，因为获取进程会在自旋时长时间浪费 CPU。自旋锁的另一个缺点是进程在保留自旋锁的同时无法让出 CPU。我们希望这样做，以便其他进程可以在拥有锁的进程等待磁盘时使用 CPU。持有自旋锁时让出是非法的，因为如果第二个线程随后尝试获取自旋锁，可能会导致死锁；由于  {    \tt    acquire   }  不让出 CPU，第二个线程的自旋可能会阻止第一个线程运行并释放锁。在持有锁时让出也会违反在持有自旋锁时中断必须关闭的要求。因此，我们需要一种在等待获取时让出 CPU，并在持有锁时允许让出（和中断）的锁。  
 
 Xv6 以以下形式提供此类锁
     \indextext{sleep-locks}    。
     \lstinline{acquiresleep}   
-    \lineref{kernel/sleeplock.c:/^acquiresleep/}    在等待时使用 CPU，使用的技术将在第    \ref{CH:SCHED}    章中解释。在较高级别上，睡眠锁具有
+    \lineref{kernel/sleeplock.c}{22}    在等待时使用 CPU，使用的技术将在第    \ref{CH:SCHED}    章中解释。在较高级别上，睡眠锁具有
  由自旋锁保护的    \lstinline{locked}    字段，以及
     \lstinline{acquiresleep}    '调用
     \lstinline{sleep}    以原子方式让出 CPU 并释放自旋锁。结果是其他线程可以执行 while
@@ -355,5 +351,4 @@ Xv6 以以下形式提供此类锁
     \lstinline{kalloc.c}    具有更多并行性，以便同时调用
  来自不同CPU的   \lstinline{kalloc}   可以继续进行而无需互相等待。   \item   使用大多数操作系统都支持的 POSIX 线程编写并行程序。例如，实现一个并行哈希表并测量放入/获取的数量是否随着核心数量的增加而变化。   \item   在 xv6 中实现 Pthread 的子集。即实现一个用户级线程库，使得一个用户进程可以有1个以上的线程，并安排这些线程可以在不同的CPU上并行运行。提出一种设计，可以正确处理线程进行阻塞系统调用并更改其共享地址空间。  \end{enumerate}     
 
-\end{document}
 

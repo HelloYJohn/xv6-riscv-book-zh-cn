@@ -1,14 +1,10 @@
 
-\documentclass[UTF8]{article}
-\usepackage{xeCJK}
-\usepackage{amsmath,amssymb}
-\begin{document}
 
    \chapter{Page tables}   
     \label{CH:MEM}     
 
-页表是最流行的机制，操作系统通过它为每个进程提供自己的私有地址空间和内存。页表确定内存地址的含义以及可以访问物理内存的哪些部分。它们允许 xv6 隔离不同进程的地址空间并将它们复用到单个物理内存上。页表是一种流行的设计，因为它们提供了一定程度的间接性，允许操作系统执行许多技巧。 Xv6 执行一些技巧：在多个地址空间中映射相同的内存（蹦床页面），并使用未映射的页面保护内核和用户堆栈。本章的其余部分解释了 RISC-V 硬件提供的页表以及 xv6 如何使用它们。
-    \section{寻呼硬件  }    提醒一下，RISC-V 指令（用户和内核）操作虚拟地址。机器的 RAM（或物理内存）通过物理地址进行索引。 RISC-V页表硬件通过将每个虚拟地址映射到物理地址来连接这两种地址。  
+页表是最流行的机制，操作系统通过它为每个进程提供自己的私有地址空间和内存。页表确定内存地址的含义以及可以访问物理内存的哪些部分。它们允许 xv6 隔离不同进程的地址空间并将它们复用到单个物理内存上。页表是一种流行的设计，因为它们提供了一定程度的间接性，允许操作系统执行许多技巧。 Xv6 执行一些技巧：在多个地址空间中映射相同的内存（ trampoline 页面），并使用未映射的页面保护内核和用户堆栈。本章的其余部分解释了 RISC-V 硬件提供的页表以及 xv6 如何使用它们。
+    \section{Paging hardware}    提醒一下，RISC-V 指令（用户和内核）操作虚拟地址。机器的 RAM（或物理内存）通过物理地址进行索引。 RISC-V页表硬件通过将每个虚拟地址映射到物理地址来连接这两种地址。  
 
    \begin{figure}[t]
 \center
@@ -36,7 +32,7 @@ xv6运行在Sv39 RISC-V上，这意味着只使用64位虚拟地址的底部39�
 与图~    \ref{fig:riscv_address}    的单层设计相比，图~    \ref{fig:riscv_pagetable}    的三层结构允许以内存高效的方式记录PTE。在大范围的虚拟地址没有映射的常见情况下，三级结构可以省略整个页目录。例如，如果应用程序仅使用从地址 0 开始的几个页，则顶级页目录的 1 到 511 项无效，并且内核不必为 511 中间页目录分配这些页。此外，内核也不必为那些 511 中间页目录的底层页目录分配页。因此，在本例中，三级设计为中间页目录保存了 511 个页面，
     $511\times512$    页面用于底层页面目录。  
 
-尽管 CPU 在硬件中遍历三级结构作为执行加载或存储指令的一部分，但三级结构的潜在缺点是 CPU 必须从内存加载三个 PTE 来执行加载/存储指令中的虚拟地址到物理地址的转换。地址。为了避免从物理内存加载 PTE 的成本，RISC-V CPU 将页表条目缓存在
+尽管 CPU 在硬件中遍历三级结构作为执行加载或存储指令的一部分，但三级结构的潜在缺点是 CPU 必须从内存加载三个 PTE 来执行加载/存储指令中的虚拟地址到物理地址的转换。为了避免从物理内存加载 PTE 的成本，RISC-V CPU 将页表条目缓存在
     \indextext{Translation Look-aside Buffer (TLB)}    。  
 
 每个 PTE 都包含标志位，这些标志位告诉分页硬件如何允许使用关联的虚拟地址。
@@ -69,29 +65,29 @@ QEMU 模拟一台包含 RAM（物理内存）的计算机，该 RAM 从物理地
  物理地址空间中的    \texttt{0x80000000}   。内核可以通过读/写这些特殊的物理地址来与设备进行交互；此类读取和写入与设备硬件而不是 RAM 进行通信。 Chapter~    \ref{CH:TRAP}    解释展示 xv6 与设备的交互。  
 
 内核使用“直接映射”获取 RAM 和内存映射设备寄存器；即将资源映射到等于物理地址的虚拟地址。例如，内核本身在虚拟地址空间和物理内存中都位于    \lstinline{KERNBASE=0x80000000}   。直接映射简化了读取或写入物理内存的内核代码。例如，当   \lstinline{fork}   为子进程分配用户内存时，分配器返回该内存的物理地址；
-    \lstinline{fork}    在将父级的用户内存复制到子级时直接使用该地址作为虚拟地址。  
+    \lstinline{fork}    在将父进程的用户内存复制到子进程时直接使用该地址作为虚拟地址。  
 
 有几个未直接映射的内核虚拟地址：  
 
    \begin{itemize}
 
  
-   \item   蹦床页面。它映射在虚拟地址空间的顶部；用户页表具有相同的映射。 Chapter~    \ref{CH:TRAP}    讨论了蹦床页的作用，但我们在这里看到了页表的一个有趣的用例；物理页（保存蹦床代码）在内核的虚拟地址空间中映射两次：一次在虚拟地址空间的顶部，一次是直接映射。   \item   内核堆栈页。每个进程都有自己的内核堆栈，该堆栈被映射到高位，以便在其下方 xv6 可以留下未映射的    \indextext{guard
+   \item   trampoline 页。它映射在虚拟地址空间的顶部；用户页表具有相同的映射。 Chapter~    \ref{CH:TRAP}    讨论了 trampoline 页的作用，但我们在这里看到了页表的一个有趣的用例；物理页（保存 trampoline 代码）在内核的虚拟地址空间中映射两次：一次在虚拟地址空间的顶部，一次是直接映射。   \item   内核堆栈页。每个进程都有自己的内核堆栈，该堆栈被映射到高位，以便在其下方 xv6 可以留下未映射的    \indextext{guard
     page}    。保护页面的 PTE 无效（即
-    \lstinline{PTE_V}    未设置），因此如果内核溢出内核堆栈，很可能会导致异常并且内核会出现恐慌。如果没有保护页，溢出的堆栈将覆盖其他内核内存，从而导致不正确的操作。恐慌崩溃是更好的选择。  \end{itemize}     
+    \lstinline{PTE_V}    未设置），因此如果内核溢出内核堆栈，很可能会导致异常并且内核会出现Panic。如果没有保护页，溢出的堆栈将覆盖其他内核内存，从而导致不正确的操作。Panic崩溃是更好的选择。  \end{itemize}     
 
 虽然内核通过高内存映射使用其堆栈，但内核也可以通过直接映射地址访问它们。另一种设计可能只有直接映射，并在直接映射地址处使用堆栈。然而，在这种安排中，提供保护页将涉及取消虚拟地址的映射，否则这些虚拟地址将引用物理内存，从而难以使用。  
 
-内核使用权限映射蹦床页面和内核文本
+内核使用权限映射 trampoline 页面和内核文本
     \lstinline{PTE_R}    和
     \lstinline{PTE_X}    。内核从这些页面读取并执行指令。内核将其他页面映射到权限
     \lstinline{PTE_R}    和
     \lstinline{PTE_W}    ，以便它可以读写这些页面中的内存。保护页的映射无效。
     \section{代码：创建地址空间  }     
 
-大多数用于操作地址空间和页表的 xv6 代码都驻留在  {    \tt    虚拟机.c   }  中
-    \lineref{kernel/vm.c:1}    。中心数据结构是  {    \tt    页表\_t   }  ，它实际上是指向 RISC-V 根页表页的指针； {    \tt    页表\_t   }  可以是内核页表，也可以是每进程页表之一。核心功能是  {    \tt    步行   }  ，它查找虚拟地址的 PTE ，以及  {    \tt    个地图页   }  ，它为新映射安装 PTE 。以  {    \tt    kvm   }  开头的函数操作内核页表；以  {    \tt    uvm   }  开头的函数操作用户页表；两者都使用其他功能。
-  {    \tt    复制   }  和  {    \tt    复制   }  将数据复制到作为系统调用参数提供的用户虚拟地址；它们位于  {    \tt    虚拟机.c   }  中，因为它们需要显式转换这些地址才能找到相应的物理内存。  
+大多数用于操作地址空间和页表的 xv6 代码都驻留在  {    \tt    vm.c   }  中
+    \lineref{kernel/vm.c:1}    。中心数据结构是  {    \tt    pagetable\_t   }  ，它实际上是指向 RISC-V 根页表页的指针； {    \tt    pagetable\_t   }  可以是内核页表，也可以是每进程页表之一。核心功能是  {    \tt    walk   }  ，它查找虚拟地址的 PTE ，以及  {    \tt    mappages   }  ，它为新映射安装 PTE 。以  {    \tt    kvm   }  开头的函数操作内核页表；以  {    \tt    uvm   }  开头的函数操作用户页表；两者都使用其他功能。
+  {    \tt    copyout   }  和  {    \tt    copyin   }  将数据复制到作为系统调用参数提供的用户虚拟地址；它们位于  {    \tt    vm.c   }  中，因为它们需要显式转换这些地址才能找到相应的物理内存。  
 
 在启动顺序的早期，
     \indexcode{main}    次调用
@@ -234,20 +230,20 @@ xv6 使用内核末尾和
     \lstinline{growproc}    调用    \lstinline{uvmalloc}    或
     \lstinline{uvmdealloc}    ，取决于    \lstinline{n}    是正数还是负数。
     \lstinline{uvmalloc}   
-    \lineref{kernel/vm.c:/^uvmalloc/}    使用  {    \tt    kalloc   }  分配物理内存，并使用  {    \tt    个地图页   }  将 PTE 添加到用户页表中。
+    \lineref{kernel/vm.c:/^uvmalloc/}    使用  {    \tt    kalloc   }  分配物理内存，并使用  {    \tt    mappages   }  将 PTE 添加到用户页表中。
     \lstinline{uvmdealloc}    调用
   {    \tt    uvmunmap   } 
-    \lineref{kernel/vm.c:/^uvmunmap/}    ，它使用  {    \tt    步行   }  查找 PTE 和
+  \lineref{kernel/vm.c:/^uvmunmap/}   ，它使用  {    \tt    work   }  查找 PTE 和
   {    \tt    kfree   }  释放它们引用的物理内存。  
 
 Xv6 使用进程的页表不仅告诉硬件如何映射用户虚拟地址，而且还作为将哪些物理内存页分配给该进程的唯一记录。这就是释放用户内存（在  {    \tt    uvmunmap   }  中）需要检查用户页表的原因。
     \section{代码：执行  }   
     \lstinline{exec}    是一个系统调用，它用从文件（称为二进制文件或可执行文件）读取的数据替换进程的用户地址空间。二进制文件通常是编译器和链接器的输出，并保存机器指令和程序数据。
-    \lstinline{exec}       \lineref{kernel/exec.c:/^exec/}    使用    \indexcode{namei}    打开命名的二进制文件    \lstinline{path}   
-    \lineref{kernel/exec.c:/namei/}    ，在 Chapter~    \ref{CH:FS}    中进行了解释。然后，它读取 ELF 标头。 Xv6 二进制文件采用广泛使用的    \indextext{ELF format}    格式，定义于
+    \lstinline{exec}       \lineref{kernel/exec.c:/^exec/}     使用    \indexcode{namei}    打开命名的二进制文件    \lstinline{path}   
+    \lineref{kernel/exec.c:/namei/}   ，在 Chapter~    \ref{CH:FS}    中进行了解释。然后，它读取 ELF 标头。 Xv6 二进制文件采用广泛使用的    \indextext{ELF format}    格式，定义于
     \fileref{kernel/elf.h}    。 ELF 二进制文件由 ELF 标头组成，
     \indexcode{struct elfhdr}       \lineref{kernel/elf.h:/^struct.elfhdr/}    ，后跟一系列程序段标头，
-    \lstinline{struct proghdr}       \lineref{kernel/elf.h:/^struct.proghdr/}    。每个
+    \lstinline{struct proghdr}       \lineref{kernel/elf.h:/^struct.proghdr/}   。每个
     \lstinline{progvhdr}    描述了必须加载到内存中的应用程序部分； xv6 程序有两个程序节头：一个用于指令，一个用于数据。  
 
 第一步是快速检查该文件是否可能包含 ELF 二进制文件。 ELF 二进制文件以四字节“幻数”开头
@@ -256,7 +252,7 @@ Xv6 使用进程的页表不仅告诉硬件如何映射用户虚拟地址，而�
     \lstinline{`L'}    ,
     \lstinline{`F'}   ，或
     \indexcode{ELF_MAGIC}   
-    \lineref{kernel/elf.h:/ELF_MAGIC/}    。如果 ELF header 有正确的幻数，
+    \lineref{kernel/elf.h}{3}    。如果 ELF header 有正确的幻数，
     \lstinline{exec}    假定二进制文件格式良好。  
 
    \lstinline{exec}    分配一个没有用户映射的新页表
@@ -349,7 +345,7 @@ RISC-V支持物理地址级别的保护，但xv6没有使用该功能。
 
 在具有大量内存的计算机上，使用 RISC-V 对“超级页面”的支持可能很有意义。当物理内存较小时，小页面很有意义，以允许以细粒度分配和页出到磁盘。例如，如果一个程序仅使用 8 KB 内存，则为其提供整个 4 MB 物理内存超级页面是一种浪费。较大的页面对于具有大量 RAM 的机器来说是有意义的，并且可以减少页表操作的开销。  
 
-xv6 内核缺少可以为小对象提供内存的类似  {    \tt    分配   }  的分配器，从而阻止内核使用需要动态分配的复杂数据结构。更复杂的内核可能会分配许多不同大小的小块，而不是（如在 xv6 中）仅 4096 字节块；真正的内核分配器需要处理小分配和大分配。  
+xv6 内核缺少可以为小对象提供内存的类似  {    \tt    malloc   }  的分配器，从而阻止内核使用需要动态分配的复杂数据结构。更复杂的内核可能会分配许多不同大小的小块，而不是（如在 xv6 中）仅 4096 字节块；真正的内核分配器需要处理小分配和大分配。  
 
 内存分配是一个长期的热门话题，基本问题是有效利用有限的内存并为未知的未来请求做好准备~    \cite{knuth}    。如今，人们更关心速度而不是空间效率。
     \section{练习  }     
@@ -374,5 +370,4 @@ xv6 内核缺少可以为小对象提供内存的类似  {    \tt    分配   } 
     \lstinline{myprog}   
     \lstinline{arg1}    。在 xv6 中实现对此约定的支持。   \item   为内核实现地址空间布局随机化。  \end{enumerate}     
 
-\end{document}
 
